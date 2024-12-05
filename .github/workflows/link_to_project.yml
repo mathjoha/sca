@@ -1,0 +1,19 @@
+name: Add non-bug issues to project
+
+on:
+  issues:
+    types:
+      - opened
+      - reopened
+
+jobs:
+  add-to-project:
+    name: Add issue to project
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/add-to-project@v1.0.1
+        with:
+          project-url: https://github.com/orgs/Modern36/projects/1
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          labeled: bug
+          label-operator: NOT
