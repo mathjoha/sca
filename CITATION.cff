@@ -1,0 +1,14 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+- family-names: "Johansson"
+  given-names: "Mathias"
+  orcid: "https://orcid.org/0000-0002-3338-0551"
+- family-names: "van Waarden"
+  given-names: "Betto"
+  orcid: "https://orcid.org/0000-0002-0923-4706"
+title: "Structural reading: Developing the method of Structural Collocation Analysis using a case study on parliamentary reporting"
+version: v0.0.0
+doi: X
+date-released: X
+url: "https://github.com/mathjoha/sca"

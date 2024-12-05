@@ -1,7 +1,23 @@
 [project]
 dependencies =[
-  "m36_utils @ https://github.com/Modern36/m36_utils/releases/tag/v0.2.1-alpha"
+  "tqdm",
+  "pandas",
+  "nltk",
+  "ipywidgets"
 ]
+name ="Structural Collocation Analysis"
+dynamic = ["version"]
+requires-python = ">= 3.8"
+authors = [
+  {name = "Mathias Johansson", email = "MathiasJoha@gmail.com},
+  {name = "Betto van Waarden"}
+]
+maintainers = [
+  {name="Mathias Johansson", email="MathiasJoha@gmail.com"}
+]
+readme = "README.md"
+description="An implementation of Structural Collocation Analysis (https://doi.org/10.1080/01615440.2024.2414259)"
+license = LICENSE
 
 [tool.isort]
 profile = "black"
@@ -31,7 +47,6 @@ force-exclude = '''
 )/
 '''
 
-readme = "README.md"
 
 
 [tool.pytest.ini_options]

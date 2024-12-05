@@ -1,31 +1,32 @@
 <a href="https://creativecommons.org/licenses/by-nc/4.0/"><img decoding="async" loading="eager" src="https://mirrors.creativecommons.org/presskit/buttons/88x31/png/by-nc.png" width="71" height="25" align="right"></a>
 
-# Template
+# Structural Collocation Analysis
 
-This is a template README for setting up new repositories within the
-*Modern36* organization on GitHub.
+This is a python + sqlite implementation of the method _Structural Collocation Analysis_ as described in [this paper]{https://doi.org/10.1080/01615440.2024.2414259}
 
-It contains a basic structure that is nice to have for new projects and
-it has two workflows set up in the `.github/workflows` directory:
+## Citing SCA
 
- 1. Auto assign:
-    - Automatically add assignees all opened issues and pulls requests
-    that do not already have an assignee.
-    - By default this assignee is @mathjoha
- 2. Link to project:
-    - Automatically add all opened and reopened issues to the project view.
-    - Ignores issues labelled as `bug`
+If you use Structural Collocation Analysis in your research, please cite the
+following article:
 
-
-## Usage
-
-1. m36_utils requirement
-   - Remove it if not needed
-   - Make sure that it is accessible if it is needed
-2. Install pre-commit functionalities:
-   `pre-commit install`
-3. Update this file to describe the repository
-4. Commit
+```BibTeX
+@article{Johansson02072024,
+author = {Mathias Johansson and Betto van Waarden},
+title = {Structural reading: Developing the method of Structural Collocation Analysis using a case study on parliamentary reporting},
+journal = {Historical Methods: A Journal of Quantitative and Interdisciplinary History},
+volume = {57},
+number = {3},
+pages = {185-198},
+year = {2024},
+publisher = {Routledge},
+doi = {10.1080/01615440.2024.2414259},
+URL = {
+        https://doi.org/10.1080/01615440.2024.2414259
+},
+eprint = {
+        https://doi.org/10.1080/01615440.2024.2414259
+}}
+```
 
 
 # License
