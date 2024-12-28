@@ -21,7 +21,7 @@ def download_data():
 
 def tsv2db(source=raw_data, db=db_path):
     with sqlite3.connect(db) as conn:
-        with open(raw_data, "r", encoding="utf8") as f:
+        with open(source, "r", encoding="utf8") as f:
             data = []
             for i, line in tqdm(enumerate(f), total=3_390_083):
                 if i == 0:

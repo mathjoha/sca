@@ -9,6 +9,7 @@ from pathlib import Path
 import pandas as pd
 from nltk.corpus import stopwords
 from tqdm.auto import tqdm
+from yaml import safe_dump
 
 from seeding_db import tsv2db
 
@@ -40,12 +41,12 @@ def cleaner(token):
 
 
 class SCA:
-    def __init__(self, db_path="sca.sqlite3"):
+    def __init__(self, db_path="sca.sqlite3", tsv_path=None):
         self.db_path = Path(db_path)
         self.yaml_path = self.db_path.with_suffix(".yml")
 
         if not os.path.exists(self.db_path):
-            tsv2db(db=self.db_path)
+            tsv2db(db=self.db_path, source=tsv_path)
 
         self.conn = sqlite3.connect(db_path)
         self.terms = set(
@@ -62,7 +63,11 @@ class SCA:
 
     def __del__(self):
         settings = {
-            "db_path": self.db_path.relative(self.yaml_path),
+            "db_path": str(
+                self.db_path.resolve().relative_to(
+                    self.yaml_path.resolve().parent
+                )
+            ),
             # Source file w/ hash?
             "collocates": self.collocates,
         }
