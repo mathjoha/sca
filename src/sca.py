@@ -41,6 +41,10 @@ def cleaner(token):
     return cleaner_pattern.sub("", token)
 
 
+def get_min_window(pos1, pos2):
+    return min(abs(p1 - p2) for p1 in pos1 for p2 in pos2)
+
+
 class SCA:
     def __init__(self, db_path="sca.sqlite3", tsv_path: Path | None = None):
         self.db_path = Path(db_path)
@@ -87,8 +91,6 @@ class SCA:
         # todo: seed db
 
     # todo: refactor
-    def get_min_window(self, pos1, pos2):
-        return min(abs(p1 - p2) for p1 in pos1 for p2 in pos2)
 
     def get_positions(self, tokens, count_stopwords=False, *patterns):
         pos_dict = {_: [] for _ in patterns}
@@ -161,7 +163,7 @@ class SCA:
                         speech_id,
                         pattern1,
                         pattern2,
-                        self.get_min_window(pos1, pos2),
+                        get_min_window(pos1, pos2),
                     )
                 )
         if len(data) == 0:
