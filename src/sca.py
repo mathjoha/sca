@@ -5,6 +5,7 @@ from fnmatch import fnmatch
 import pandas as pd
 import logging
 
+from pahtlib import Path
 from nltk.corpus import stopwords
 
 import re
@@ -34,8 +35,9 @@ def cleaner(token):
 
 class SCA:
     def __init__(self, db_path="sca.sqlite3"):
-        # load settings to yaml
-        self.db_path = db_path
+        self.db_path = Path(db_path)
+        self.yaml_path = self.db_path.with_suffix('.yml')
+
         if not os.path.exists(self.db_path):
             tsv2db(db=self.db_path)
 
@@ -52,7 +54,14 @@ class SCA:
             ).fetchall()
         )
 
-    # todo: add exit and save to yaml
+    def __del__(self):
+        settings = [
+            'db_path' : self.db_path.relative(self.yaml_path),
+            # Source file w/ hash?
+            'collocates' : self.collocates
+        ]
+        with open(self.yaml_path, 'w', encoding='utf8') as f:
+            safe_dump(data=settings, stream=f)
 
     def _add_term(self, term):
         self.tabulate_term(term)

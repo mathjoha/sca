@@ -3,7 +3,8 @@ dependencies =[
   "tqdm",
   "pandas",
   "nltk",
-  "ipywidgets"
+  "ipywidgets",
+  "PyYAML==6.0.2",
 ]
 name ="Structural Collocation Analysis"
 dynamic = ["version"]
