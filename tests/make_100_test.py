@@ -1,3 +1,4 @@
+import sqlite3
 from pathlib import Path
 from tempfile import mkdtemp
 
@@ -18,6 +19,13 @@ def temp_dir():
     return Path(mkdtemp())
 
 
-def test_convert_tsv(temp_dir, tsv_file):
+@pytest.fixture(scope="module")
+def sca_filled(temp_dir, tsv_file):
     db_path = temp_dir / "sca.sqlite3"
     sca = SCA(db_path=db_path, tsv_path=tsv_file)
+    return sca
+
+
+def test_count_entries(sca_filled):
+    count, *_ = sca_filled.conn.execute("select count(*) from raw").fetchone()
+    assert count == 100

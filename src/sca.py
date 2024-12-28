@@ -1,3 +1,4 @@
+import atexit
 import logging
 import os
 import re
@@ -41,7 +42,7 @@ def cleaner(token):
 
 
 class SCA:
-    def __init__(self, db_path="sca.sqlite3", tsv_path=None):
+    def __init__(self, db_path="sca.sqlite3", tsv_path: Path | None = None):
         self.db_path = Path(db_path)
         self.yaml_path = self.db_path.with_suffix(".yml")
 
@@ -60,8 +61,9 @@ class SCA:
                 "select distinct pattern1, pattern2 from collocate_window"
             ).fetchall()
         )
+        atexit.register(self.save)
 
-    def __del__(self):
+    def save(self):
         settings = {
             "db_path": str(
                 self.db_path.resolve().relative_to(

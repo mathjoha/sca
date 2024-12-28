@@ -39,6 +39,10 @@ def tsv2db(source=raw_data, db=db_path):
                         f"INSERT INTO raw ({headers}) values ({qmarks})", data
                     )
                     data = []
+        if len(data) > 0:
+            conn.executemany(
+                f"INSERT INTO raw ({headers}) values ({qmarks})", data
+            )
 
         conn.execute(
             "CREATE TABLE collocate_window (speech_fk, pattern1, pattern2, window)"
