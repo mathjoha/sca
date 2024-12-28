@@ -29,3 +29,25 @@ def sca_filled(temp_dir, tsv_file):
 def test_count_entries(sca_filled):
     count, *_ = sca_filled.conn.execute("select count(*) from raw").fetchone()
     assert count == 100
+
+
+def test_columns(sca_filled):
+    cursor = sca_filled.conn.execute("select * from raw")
+    columns = [_[0] for _ in cursor.description]
+    assert columns == [
+        "speech_id",
+        "year",
+        "date",
+        "parliament",
+        "topic",
+        "function",
+        "speaker_id",
+        "party",
+        "party_in_power",
+        "cabinet",
+        "district",
+        "district_class",
+        "times_in_house",
+        "seniority",
+        "speech_text",
+    ]
