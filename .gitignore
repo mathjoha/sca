@@ -1,11 +1,14 @@
+.vscode/
+__pycache__/
+.venv/
+
 *.zip
 *.png
 *.7z
 *.jpeg
 *.jpg
-__pycache__/
 *.txt
 *.tsv
 
 *.code-workspace
-.vscode/
+*.egg-info

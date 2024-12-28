@@ -1,22 +1,28 @@
-import sqlite3
-from tqdm.auto import tqdm
-
-from fnmatch import fnmatch
-import pandas as pd
 import logging
-
-from pahtlib import Path
-from nltk.corpus import stopwords
-
-import re
 import os
-
+import re
+import sqlite3
 from collections import defaultdict
+from fnmatch import fnmatch
+from pathlib import Path
+
+import pandas as pd
+from nltk.corpus import stopwords
+from tqdm.auto import tqdm
 
 from seeding_db import tsv2db
 
 sw = set(stopwords.words("english"))
-sw |= {"hon", "house", "member", "common", "speaker", "mr", "friend", "gentleman"}
+sw |= {
+    "hon",
+    "house",
+    "member",
+    "common",
+    "speaker",
+    "mr",
+    "friend",
+    "gentleman",
+}
 sw |= {"one", "would"}
 
 
@@ -36,7 +42,7 @@ def cleaner(token):
 class SCA:
     def __init__(self, db_path="sca.sqlite3"):
         self.db_path = Path(db_path)
-        self.yaml_path = self.db_path.with_suffix('.yml')
+        self.yaml_path = self.db_path.with_suffix(".yml")
 
         if not os.path.exists(self.db_path):
             tsv2db(db=self.db_path)
@@ -55,12 +61,12 @@ class SCA:
         )
 
     def __del__(self):
-        settings = [
-            'db_path' : self.db_path.relative(self.yaml_path),
+        settings = {
+            "db_path": self.db_path.relative(self.yaml_path),
             # Source file w/ hash?
-            'collocates' : self.collocates
-        ]
-        with open(self.yaml_path, 'w', encoding='utf8') as f:
+            "collocates": self.collocates,
+        }
+        with open(self.yaml_path, "w", encoding="utf8") as f:
             safe_dump(data=settings, stream=f)
 
     def _add_term(self, term):
@@ -95,9 +101,13 @@ class SCA:
         data = {"table": cleaned_pattern}
         if (
             not (cleaned_pattern,)
-            in self.conn.execute("select tbl_name from sqlite_master").fetchall()
+            in self.conn.execute(
+                "select tbl_name from sqlite_master"
+            ).fetchall()
         ):
-            self.conn.execute(f"create table {cleaned_pattern} (speech_fk)", data)
+            self.conn.execute(
+                f"create table {cleaned_pattern} (speech_fk)", data
+            )
             self.conn.execute(
                 f'insert into {cleaned_pattern} select speech_id from raw where speech_text like "%" || :table || "%"',
                 data,
@@ -140,7 +150,12 @@ class SCA:
                 continue
             else:
                 data.append(
-                    (speech_id, pattern1, pattern2, self.get_min_window(pos1, pos2))
+                    (
+                        speech_id,
+                        pattern1,
+                        pattern2,
+                        self.get_min_window(pos1, pos2),
+                    )
                 )
         if len(data) == 0:
             # For tracking that no collocates were found
@@ -160,7 +175,9 @@ class SCA:
         clean_terms = set()
         for collocate in collocates:
             clean_pair = {
-                cleaner(pattern) for pattern in collocate if not str(pattern).isdigit()
+                cleaner(pattern)
+                for pattern in collocate
+                if not str(pattern).isdigit()
             }
 
             if len(clean_pair) != 2:
@@ -186,9 +203,7 @@ class SCA:
             self.collocate_to_condition(p1, p2, w) for p1, p2, w in collocates
         )
 
-        id_query = (
-            f" (select distinct speech_fk from collocate_window where {conditions}) "
-        )
+        id_query = f" (select distinct speech_fk from collocate_window where {conditions}) "
 
         return id_query
 
@@ -217,7 +232,13 @@ class SCA:
 
         df_all = df_baseline.merge(
             df_collocates,
-            on=["parliament", "party", "party_in_power", "district_class", "seniority"],
+            on=[
+                "parliament",
+                "party",
+                "party_in_power",
+                "district_class",
+                "seniority",
+            ],
             how="outer",
         ).fillna(0)
 
@@ -304,13 +325,17 @@ class SCA:
 class Speech:
     def __init__(self, speech_id, raw_text, collocates):
         self.speech_id = speech_id
-        self.tokens = [Token(self, raw_token) for raw_token in tokenizer(raw_text)]
+        self.tokens = [
+            Token(self, raw_token) for raw_token in tokenizer(raw_text)
+        ]
         self.collocates = collocates
 
         self.collocate_tokens = []
 
         self.patterns = set(
-            pattern for collocate in self.collocates for pattern in collocate[:2]
+            pattern
+            for collocate in self.collocates
+            for pattern in collocate[:2]
         )
 
 
@@ -324,7 +349,9 @@ class Token:
         self.sw_pos = pos
 
         self.coll_patterns = [
-            pattern for pattern in self.speech.patterns if fnmatch(self.token, pattern)
+            pattern
+            for pattern in self.speech.patterns
+            if fnmatch(self.token, pattern)
         ]
 
         if len(self.coll_patterns) > 0:
