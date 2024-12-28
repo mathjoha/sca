@@ -14,7 +14,7 @@ repos:
     -   id: end-of-file-fixer
     -   id: check-yaml
     -   id: check-added-large-files
-        stages: [pre-push]
+        stages: [pre-push, pre-merge-commit, post-merge, pre-rebase]
 -   repo: https://github.com/psf/black
     rev: 22.10.0
     hooks:
@@ -25,5 +25,15 @@ repos:
         name: pytest-check
         always_run: true
         entry: pytest
+        language: system
+        pass_filenames: false
+    -   id: coverage
+        name: coverage-check
+        entry: "pytest --cov=src"
+        language: system
+        pass_filenames: false
+    -   id: coverage-badge
+        name: coverage-badge
+        entry: "coverage-badge -fo media/coverage.svg"
         language: system
         pass_filenames: false

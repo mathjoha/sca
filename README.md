@@ -1,3 +1,4 @@
+![test-coverage](/media/coverage.svg)
 <a href="https://creativecommons.org/licenses/by-nc/4.0/"><img decoding="async" loading="eager" src="https://mirrors.creativecommons.org/presskit/buttons/88x31/png/by-nc.png" width="71" height="25" align="right"></a>
 
 # Structural Collocation Analysis

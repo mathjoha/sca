@@ -1,6 +1,7 @@
-import sqlite3
-import requests
 import os
+import sqlite3
+
+import requests
 from tqdm.auto import tqdm
 
 raw_data = "uk_hansard_1935_2014_BvW_2022.tsv"

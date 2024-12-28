@@ -56,3 +56,10 @@ addopts = [
 ]
 testpaths = ["tests"]
 pythonpath = "src"
+
+[dependency-groups]
+test = [
+  "pytest",
+  "pytest-cov",
+  "coverage-badge"
+]
