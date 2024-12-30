@@ -87,17 +87,23 @@ class SCA:
     def seed_db(self, source_path):
         with sqlite3.connect(self.db_path) as conn:
             with open(source_path, "r", encoding="utf8") as f:
+                next(f)
+                c = 0
+                for _ in f:
+                    c += 1
+
+            with open(source_path, "r", encoding="utf8") as f:
                 data = []
-                for i, line in tqdm(enumerate(f), total=3_390_083):
-                    if i == 0:
-                        headers = ",".join(line.rstrip().split("\t"))
-                        qmarks = ",".join("?" for _ in line.split("\t"))
-                        conn.execute(f"CREATE TABLE raw ({headers})")
-                        conn.execute(
-                            "CREATE UNIQUE INDEX index_sentence on raw (speech_id)"
-                        )
-                    else:
-                        data.append(line.split("\t"))
+                line = next(f)
+                headers = ",".join(line.rstrip().split("\t"))
+                qmarks = ",".join("?" for _ in line.split("\t"))
+                conn.execute(f"CREATE TABLE raw ({headers})")
+                conn.execute(
+                    "CREATE UNIQUE INDEX index_sentence on raw (speech_id)"
+                )
+
+                for i, line in tqdm(enumerate(f), total=c):
+                    data.append(line.split("\t"))
 
                     if len(data) == 500_000:
                         conn.executemany(
