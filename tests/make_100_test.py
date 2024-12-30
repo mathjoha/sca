@@ -134,3 +134,9 @@ class TestSavedSettings:
             yml_loaded.settings_dict()["db_path"]
             == sca_filled.settings_dict()["db_path"]
         )
+
+    def test_keys(self, yml_loaded, sca_filled):
+        assert (
+            yml_loaded.settings_dict().keys()
+            == sca_filled.settings_dict().keys()
+        )
