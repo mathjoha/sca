@@ -77,3 +77,14 @@ def test_collocate_sum(speeches_with_collocates):
 
 def test_collocate_lenw10(speeches_with_collocates):
     assert len([w for *_, w in speeches_with_collocates if w <= 10]) == 9
+
+
+@pytest.mark.xfail(strict=True, reason="Red Phase")
+def test_name_id_col():
+    sca = SCA(db_path=db_path, tsv_path=tsv_file, id_col="id_col_name")
+    assert sca.id_col == "id_col_name"
+
+
+@pytest.mark.xfail(strict=True, reason="Red Phase")
+def test_name_id_col(sca_filled):
+    assert sca_filled.id_col == "speech_id"
