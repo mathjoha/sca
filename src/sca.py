@@ -51,7 +51,7 @@ class SCA:
         self.yaml_path = self.db_path.with_suffix(".yml")
 
         if not os.path.exists(self.db_path):
-            tsv2db(db=self.db_path, source=tsv_path)
+            self.seed_db(tsv_path)
 
         self.conn = sqlite3.connect(db_path)
         self.terms = set(
@@ -86,9 +86,8 @@ class SCA:
             term,
         }
 
-    def seed_db(self, db_path, source_path):
-        ...
-        # todo: seed db
+    def seed_db(self, source_path):
+        tsv2db(db=self.db_path, source=source_path)
 
     # todo: refactor
 
