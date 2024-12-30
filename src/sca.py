@@ -12,8 +12,6 @@ from nltk.corpus import stopwords
 from tqdm.auto import tqdm
 from yaml import safe_dump
 
-from seeding_db import tsv2db
-
 sw = set(stopwords.words("english"))
 sw |= {
     "hon",
@@ -87,7 +85,36 @@ class SCA:
         }
 
     def seed_db(self, source_path):
-        tsv2db(db=self.db_path, source=source_path)
+        with sqlite3.connect(self.db_path) as conn:
+            with open(source_path, "r", encoding="utf8") as f:
+                data = []
+                for i, line in tqdm(enumerate(f), total=3_390_083):
+                    if i == 0:
+                        headers = ",".join(line.rstrip().split("\t"))
+                        qmarks = ",".join("?" for _ in line.split("\t"))
+                        conn.execute(f"CREATE TABLE raw ({headers})")
+                        conn.execute(
+                            "CREATE UNIQUE INDEX index_sentence on raw (speech_id)"
+                        )
+                    else:
+                        data.append(line.split("\t"))
+
+                    if len(data) == 500_000:
+                        conn.executemany(
+                            f"INSERT INTO raw ({headers}) values ({qmarks})",
+                            data,
+                        )
+                        data = []
+            if len(data) > 0:
+                conn.executemany(
+                    f"INSERT INTO raw ({headers}) values ({qmarks})", data
+                )
+
+            conn.execute(
+                "CREATE TABLE collocate_window (speech_fk, pattern1, pattern2, window)"
+            )
+
+            conn.commit()
 
     # todo: refactor
 
