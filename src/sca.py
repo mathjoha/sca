@@ -82,6 +82,7 @@ class SCA:
 
     def save(self):
         settings = self.settings_dict()
+        settings["collocates"] = list(settings["collocates"])
         with open(self.yaml_path, "w", encoding="utf8") as f:
             safe_dump(data=settings, stream=f)
 
@@ -128,8 +129,6 @@ class SCA:
             )
 
             conn.commit()
-
-    # todo: refactor
 
     def get_positions(self, tokens, count_stopwords=False, *patterns):
         pos_dict = {_: [] for _ in patterns}

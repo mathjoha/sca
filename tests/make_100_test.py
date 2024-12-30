@@ -3,6 +3,7 @@ from pathlib import Path
 from tempfile import mkdtemp
 
 import pytest
+from yaml import safe_load
 
 from sca import SCA
 
@@ -35,6 +36,13 @@ def speeches_with_collocates(sca_filled):
 @pytest.fixture(scope="module")
 def settings(sca_filled):
     return sca_filled.settings_dict()
+
+
+@pytest.fixture(scope="module")
+def yml_settings(sca_filled):
+    sca_filled.save()
+    with open(sca_filled.yaml_path, "r", encoding="utf8") as f:
+        return safe_load(f)
 
 
 def test_count_entries(sca_filled):
@@ -100,4 +108,10 @@ class TestSavedSettings:
         }
 
     def test_stored(self, settings, sca_filled):
-        assert settings["collocates"] == sca_filled.collocates
+        assert set(settings["collocates"]) == sca_filled.collocates
+
+    def test_yml_collocates(self, yml_settings, settings):
+        assert (
+            set(tuple(collocate) for collocate in yml_settings["collocates"])
+            == settings["collocates"]
+        )
