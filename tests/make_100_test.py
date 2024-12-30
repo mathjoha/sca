@@ -48,13 +48,8 @@ def yml_settings(sca_filled):
 
 
 @pytest.fixture(scope="module")
-def yml_loaded(sca_filled, temp_dir):
-    db_path = temp_dir / "sca.sqlite3"
-    corpus = sca.from_tsv(
-        db_path=db_path, tsv_path=tsv_file, id_col="speech_id"
-    )
-    corpus.load(sca_filled.yaml_path)
-    return corpus
+def yml_loaded(sca_filled):
+    return sca.from_yml(sca_filled.yaml_path)
 
 
 def test_count_entries(sca_filled):

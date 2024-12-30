@@ -44,19 +44,29 @@ def get_min_window(pos1, pos2):
 
 
 def from_tsv(tsv_path: str | Path, db_path: str | Path, id_col: str):
-    corpus = SCA(db_path=db_path, tsv_path=tsv_path, id_col=id_col)
+    corpus = SCA()
+    corpus.read_tsv(db_path=db_path, tsv_path=tsv_path, id_col=id_col)
+
+    return corpus
+
+
+def from_yml(yml_path):
+    corpus = SCA()
+    corpus.load(yml_path)
     return corpus
 
 
 class SCA:
-    def __init__(
+    db_path = Path("sca.sqlite3")
+
+    def read_tsv(
         self, db_path="sca.sqlite3", tsv_path: Path | None = None, id_col=None
     ):
         self.db_path = Path(db_path)
         self.yaml_path = self.db_path.with_suffix(".yml")
         self.id_col = id_col
 
-        if not os.path.exists(self.db_path):
+        if not self.db_path.exists():
             self.seed_db(tsv_path)
 
         self.conn = sqlite3.connect(db_path)
@@ -88,6 +98,7 @@ class SCA:
     def save(self):
         settings = self.settings_dict()
         settings["collocates"] = list(settings["collocates"])
+        settings["id_col"] = self.id_col
         with open(self.yaml_path, "w", encoding="utf8") as f:
             safe_dump(data=settings, stream=f)
 
@@ -100,6 +111,7 @@ class SCA:
         self.collocates = set(
             tuple(collocate) for collocate in settings["collocates"]
         )
+        self.id_col = settings["id_col"]
 
     def _add_term(self, term):
         self.tabulate_term(term)
