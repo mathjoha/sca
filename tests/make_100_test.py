@@ -5,7 +5,7 @@ from tempfile import mkdtemp
 import pytest
 from yaml import safe_load
 
-from sca import SCA
+import sca
 
 
 @pytest.fixture(scope="module")
@@ -23,10 +23,12 @@ def temp_dir():
 @pytest.fixture(scope="module")
 def sca_filled(temp_dir, tsv_file):
     db_path = temp_dir / "sca.sqlite3"
-    sca = SCA(db_path=db_path, tsv_path=tsv_file, id_col="speech_id")
-    sca.add_collocates((("govern*", "minister*"),))
-    sca.save()
-    return sca
+    corpus = sca.from_tsv(
+        db_path=db_path, tsv_path=tsv_file, id_col="speech_id"
+    )
+    corpus.add_collocates((("govern*", "minister*"),))
+    corpus.save()
+    return corpus
 
 
 @pytest.fixture(scope="module")
@@ -48,9 +50,11 @@ def yml_settings(sca_filled):
 @pytest.fixture(scope="module")
 def yml_loaded(sca_filled, temp_dir):
     db_path = temp_dir / "sca.sqlite3"
-    sca = SCA(db_path=db_path, tsv_path=tsv_file, id_col="speech_id")
-    sca.load(sca_filled.yaml_path)
-    return sca
+    corpus = sca.from_tsv(
+        db_path=db_path, tsv_path=tsv_file, id_col="speech_id"
+    )
+    corpus.load(sca_filled.yaml_path)
+    return corpus
 
 
 def test_count_entries(sca_filled):
@@ -101,8 +105,8 @@ def test_collocate_lenw10(speeches_with_collocates):
 
 
 def test_name_id_col():
-    sca = SCA(db_path=db_path, tsv_path=tsv_file, id_col="id_col_name")
-    assert sca.id_col == "id_col_name"
+    corpus = SCA(db_path=db_path, tsv_path=tsv_file, id_col="id_col_name")
+    assert corpus.id_col == "id_col_name"
 
 
 def test_name_id_col(sca_filled):

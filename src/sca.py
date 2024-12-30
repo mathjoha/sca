@@ -43,6 +43,11 @@ def get_min_window(pos1, pos2):
     return min(abs(p1 - p2) for p1 in pos1 for p2 in pos2)
 
 
+def from_tsv(tsv_path: str | Path, db_path: str | Path, id_col: str):
+    corpus = SCA(db_path=db_path, tsv_path=tsv_path, id_col=id_col)
+    return corpus
+
+
 class SCA:
     def __init__(
         self, db_path="sca.sqlite3", tsv_path: Path | None = None, id_col=None
