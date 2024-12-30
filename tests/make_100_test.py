@@ -22,8 +22,19 @@ def temp_dir():
 @pytest.fixture(scope="module")
 def sca_filled(temp_dir, tsv_file):
     db_path = temp_dir / "sca.sqlite3"
-    sca = SCA(db_path=db_path, tsv_path=tsv_file)
+    sca = SCA(db_path=db_path, tsv_path=tsv_file, id_col="speech_id")
+    sca.add_collocates((("govern*", "minister*"),))
     return sca
+
+
+@pytest.fixture(scope="module")
+def speeches_with_collocates(sca_filled):
+    return sca_filled.conn.execute("select * from collocate_window").fetchall()
+
+
+@pytest.fixture(scope="module")
+def settings(sca_filled):
+    return sca_filled.settings_dict()
 
 
 def test_count_entries(sca_filled):
@@ -53,12 +64,6 @@ def test_columns(sca_filled):
     ]
 
 
-@pytest.fixture(scope="module")
-def speeches_with_collocates(sca_filled):
-    sca_filled.add_collocates((("govern*", "minister*"),))
-    return sca_filled.conn.execute("select * from collocate_window").fetchall()
-
-
 def test_collocate_len(speeches_with_collocates):
     assert len(speeches_with_collocates) == 20
 
@@ -79,12 +84,17 @@ def test_collocate_lenw10(speeches_with_collocates):
     assert len([w for *_, w in speeches_with_collocates if w <= 10]) == 9
 
 
-@pytest.mark.xfail(strict=True, reason="Red Phase")
 def test_name_id_col():
     sca = SCA(db_path=db_path, tsv_path=tsv_file, id_col="id_col_name")
     assert sca.id_col == "id_col_name"
 
 
-@pytest.mark.xfail(strict=True, reason="Red Phase")
 def test_name_id_col(sca_filled):
     assert sca_filled.id_col == "speech_id"
+
+
+class TestSavedSettings:
+    def test_collocates(self, settings):
+        assert settings["collocates"] == {
+            ("govern*", "minister*"),
+        }
