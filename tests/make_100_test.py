@@ -98,3 +98,6 @@ class TestSavedSettings:
         assert settings["collocates"] == {
             ("govern*", "minister*"),
         }
+
+    def test_stored(self, settings, sca_filled):
+        assert settings["collocates"] == sca_filled.collocates
