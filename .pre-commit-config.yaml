@@ -21,14 +21,8 @@ repos:
     -   id: black
 -   repo: local
     hooks:
-    -   id: pytest-check
-        name: pytest-check
-        always_run: true
-        entry: pytest
-        language: system
-        pass_filenames: false
     -   id: coverage
-        name: coverage-check
+        name: pytest-coverage-check
         entry: "pytest --cov=src"
         language: system
         pass_filenames: false
