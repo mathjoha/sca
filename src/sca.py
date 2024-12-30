@@ -12,8 +12,6 @@ from nltk.corpus import stopwords
 from tqdm.auto import tqdm
 from yaml import safe_dump
 
-from seeding_db import tsv2db
-
 sw = set(stopwords.words("english"))
 sw |= {
     "hon",
@@ -46,12 +44,15 @@ def get_min_window(pos1, pos2):
 
 
 class SCA:
-    def __init__(self, db_path="sca.sqlite3", tsv_path: Path | None = None):
+    def __init__(
+        self, db_path="sca.sqlite3", tsv_path: Path | None = None, id_col=None
+    ):
         self.db_path = Path(db_path)
         self.yaml_path = self.db_path.with_suffix(".yml")
+        self.id_col = id_col
 
         if not os.path.exists(self.db_path):
-            tsv2db(db=self.db_path, source=tsv_path)
+            self.seed_db(tsv_path)
 
         self.conn = sqlite3.connect(db_path)
         self.terms = set(
@@ -67,7 +68,7 @@ class SCA:
         )
         atexit.register(self.save)
 
-    def save(self):
+    def settings_dict(self):
         settings = {
             "db_path": str(
                 self.db_path.resolve().relative_to(
@@ -77,6 +78,10 @@ class SCA:
             # Source file w/ hash?
             "collocates": self.collocates,
         }
+        return settings
+
+    def save(self):
+        settings = self.settings_dict()
         with open(self.yaml_path, "w", encoding="utf8") as f:
             safe_dump(data=settings, stream=f)
 
@@ -86,9 +91,43 @@ class SCA:
             term,
         }
 
-    def seed_db(self, db_path, source_path):
-        ...
-        # todo: seed db
+    def seed_db(self, source_path):
+        with sqlite3.connect(self.db_path) as conn:
+            with open(source_path, "r", encoding="utf8") as f:
+                next(f)
+                c = 0
+                for _ in f:
+                    c += 1
+
+            with open(source_path, "r", encoding="utf8") as f:
+                data = []
+                line = next(f)
+                headers = ",".join(line.rstrip().split("\t"))
+                qmarks = ",".join("?" for _ in line.split("\t"))
+                conn.execute(f"CREATE TABLE raw ({headers})")
+                conn.execute(
+                    f"CREATE UNIQUE INDEX index_sentence on raw ({self.id_col})"
+                )
+
+                for i, line in tqdm(enumerate(f), total=c):
+                    data.append(line.split("\t"))
+
+                    if len(data) == 500_000:
+                        conn.executemany(
+                            f"INSERT INTO raw ({headers}) values ({qmarks})",
+                            data,
+                        )
+                        data = []
+            if len(data) > 0:
+                conn.executemany(
+                    f"INSERT INTO raw ({headers}) values ({qmarks})", data
+                )
+
+            conn.execute(
+                "CREATE TABLE collocate_window (speech_fk, pattern1, pattern2, window)"
+            )
+
+            conn.commit()
 
     # todo: refactor
 
@@ -118,7 +157,7 @@ class SCA:
                 f"create table {cleaned_pattern} (speech_fk)", data
             )
             self.conn.execute(
-                f'insert into {cleaned_pattern} select speech_id from raw where speech_text like "%" || :table || "%"',
+                f'insert into {cleaned_pattern} select {self.id_col} from raw where speech_text like "%" || :table || "%"',
                 data,
             )
             self.conn.commit()
@@ -137,7 +176,7 @@ class SCA:
         data = []
         for speech_id, text in tqdm(
             self.conn.execute(
-                f"select speech_id, speech_text from raw join {clean1} on {clean1}.speech_fk == speech_id join {clean2} on {clean2}.speech_fk == speech_id",
+                f"select {self.id_col}, speech_text from raw join {clean1} on {clean1}.speech_fk == {self.id_col} join {clean2} on {clean2}.speech_fk == {self.id_col}",
                 {"term1": clean2, "term2": clean2},
             ),
             desc=f"Calculating windows for {pattern1} - {pattern2}",
@@ -206,6 +245,7 @@ class SCA:
 
         for collocate in prepared_collocates:
             self.mark_windows(*collocate)
+        self.collocates |= prepared_collocates
 
     def collocate_to_speech_query(self, collocates):
         conditions = " or ".join(
@@ -220,7 +260,7 @@ class SCA:
         id_query = self.collocate_to_speech_query(collocates)
 
         c = self.conn.execute(
-            f"select parliament, party, party_in_power, district_class, seniority, count(rowid) from raw where speech_id in {id_query} group by parliament, party, party_in_power, district_class, seniority"
+            f"select parliament, party, party_in_power, district_class, seniority, count(rowid) from raw where {self.id_col} in {id_query} group by parliament, party, party_in_power, district_class, seniority"
         )
 
         return c
@@ -235,7 +275,7 @@ class SCA:
         id_query = self.collocate_to_speech_query(collocates)
 
         df_collocates = pd.read_sql_query(
-            f"select parliament, party, party_in_power, district_class, seniority, count(rowid) as collocate_count from raw where speech_id in {id_query} group by parliament, party, party_in_power, district_class, seniority",
+            f"select parliament, party, party_in_power, district_class, seniority, count(rowid) as collocate_count from raw where {self.id_col} in {id_query} group by parliament, party, party_in_power, district_class, seniority",
             self.conn,
         )
 
@@ -287,7 +327,7 @@ class SCA:
 
         data = []
         for speech_fk, text in self.conn.execute(
-            f"select speech_id, speech_text from raw where speechid in {id_query}"
+            f"select {self.id_col}, speech_text from raw where speechid in {id_query}"
         ):
             sw_pos_adjust = 0
             speech_data = []
