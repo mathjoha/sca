@@ -34,7 +34,7 @@ tokenizer_pattern = re.compile(r"\s+")
 
 
 def tokenizer(text):
-    return tokenizer_pattern.split(text)
+    return tokenizer_pattern.split(text.lower())
 
 
 def cleaner(token):
@@ -96,7 +96,7 @@ class SCA:
         pos_dict = {_: [] for _ in patterns}
         stops = 0
         for i, token in enumerate(tokens):
-            if not count_stopwords and token.lower() in sw:
+            if token.lower() in sw:
                 stops += 1
             else:
                 for pattern in patterns:

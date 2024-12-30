@@ -51,3 +51,29 @@ def test_columns(sca_filled):
         "seniority",
         "speech_text",
     ]
+
+
+@pytest.fixture(scope="module")
+def speeches_with_collocates(sca_filled):
+    sca_filled.add_collocates((("govern*", "minister*"),))
+    return sca_filled.conn.execute("select * from collocate_window").fetchall()
+
+
+def test_collocate_len(speeches_with_collocates):
+    assert len(speeches_with_collocates) == 20
+
+
+def test_collocate_min(speeches_with_collocates):
+    assert min(w for *_, w in speeches_with_collocates) == 1
+
+
+def test_collocate_max(speeches_with_collocates):
+    assert max(w for *_, w in speeches_with_collocates) == 82
+
+
+def test_collocate_sum(speeches_with_collocates):
+    assert sum(w for *_, w in speeches_with_collocates) == 384
+
+
+def test_collocate_lenw10(speeches_with_collocates):
+    assert len([w for *_, w in speeches_with_collocates if w <= 10]) == 9
