@@ -25,6 +25,7 @@ def sca_filled(temp_dir, tsv_file):
     db_path = temp_dir / "sca.sqlite3"
     sca = SCA(db_path=db_path, tsv_path=tsv_file, id_col="speech_id")
     sca.add_collocates((("govern*", "minister*"),))
+    sca.save()
     return sca
 
 
@@ -40,9 +41,16 @@ def settings(sca_filled):
 
 @pytest.fixture(scope="module")
 def yml_settings(sca_filled):
-    sca_filled.save()
     with open(sca_filled.yaml_path, "r", encoding="utf8") as f:
         return safe_load(f)
+
+
+@pytest.fixture(scope="module")
+def yml_loaded(sca_filled, temp_dir):
+    db_path = temp_dir / "sca.sqlite3"
+    sca = SCA(db_path=db_path, tsv_path=tsv_file, id_col="speech_id")
+    sca.load(sca_filled.yaml_path)
+    return sca
 
 
 def test_count_entries(sca_filled):
@@ -114,4 +122,16 @@ class TestSavedSettings:
         assert (
             set(tuple(collocate) for collocate in yml_settings["collocates"])
             == settings["collocates"]
+        )
+
+    def test_yaml_read_collocates(self, yml_loaded, sca_filled):
+        assert (
+            yml_loaded.settings_dict()["collocates"]
+            == sca_filled.settings_dict()["collocates"]
+        )
+
+    def test_yaml_read_dbpath(self, yml_loaded, sca_filled):
+        assert (
+            yml_loaded.settings_dict()["db_path"]
+            == sca_filled.settings_dict()["db_path"]
         )

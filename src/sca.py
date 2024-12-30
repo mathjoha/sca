@@ -10,7 +10,7 @@ from pathlib import Path
 import pandas as pd
 from nltk.corpus import stopwords
 from tqdm.auto import tqdm
-from yaml import safe_dump
+from yaml import safe_dump, safe_load
 
 sw = set(stopwords.words("english"))
 sw |= {
@@ -85,6 +85,16 @@ class SCA:
         settings["collocates"] = list(settings["collocates"])
         with open(self.yaml_path, "w", encoding="utf8") as f:
             safe_dump(data=settings, stream=f)
+
+    def load(self, settings_path: str | Path):
+        self.yaml_path = Path(settings_path)
+        with open(settings_path, "r", encoding="utf8") as f:
+            settings = safe_load(f)
+
+        self.db_path = Path(settings_path).parent / Path(settings["db_path"])
+        self.collocates = set(
+            tuple(collocate) for collocate in settings["collocates"]
+        )
 
     def _add_term(self, term):
         self.tabulate_term(term)
