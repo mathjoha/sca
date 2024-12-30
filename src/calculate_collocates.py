@@ -1,6 +1,6 @@
-from sca import SCA
-
 import argparse
+
+from sca import SCA
 
 # todo: add naming of grouping
 parser = argparse.ArgumentParser(description="Calculate collocates")

@@ -3,9 +3,10 @@ dependencies =[
   "tqdm",
   "pandas",
   "nltk",
-  "ipywidgets"
+  "ipywidgets",
+  "PyYAML==6.0.2",
 ]
-name ="Structural Collocation Analysis"
+name ="sca"
 dynamic = ["version"]
 requires-python = ">= 3.8"
 authors = [
@@ -17,7 +18,7 @@ maintainers = [
 ]
 readme = "README.md"
 description="An implementation of Structural Collocation Analysis (https://doi.org/10.1080/01615440.2024.2414259)"
-license = "LICENSE"
+license = {"file"= "LICENSE"}
 
 [tool.isort]
 profile = "black"
@@ -55,3 +56,10 @@ addopts = [
 ]
 testpaths = ["tests"]
 pythonpath = "src"
+
+[dependency-groups]
+test = [
+  "pytest",
+  "pytest-cov",
+  "coverage-badge"
+]

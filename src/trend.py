@@ -1,14 +1,15 @@
-from main import SCA
-from ipywidgets import SelectMultiple
-from ipywidgets import Textarea
-from ipywidgets import IntText
-from ipywidgets import Layout
-from ipywidgets import Button
-from ipywidgets import VBox
-from ipywidgets import HBox
-from ipywidgets import Box
-
 import pandas as pd
+from ipywidgets import (
+    Box,
+    Button,
+    HBox,
+    IntText,
+    Layout,
+    SelectMultiple,
+    Textarea,
+    VBox,
+)
+from main import SCA
 
 
 class StructuralCollocationAnalysis(SCA):
@@ -45,7 +46,9 @@ class StructuralCollocationAnalysis(SCA):
 
         line2 = [self.colloc_selector]
 
-        box_layout = Layout(display="flex", flex_flow="row", align_items="stretch")
+        box_layout = Layout(
+            display="flex", flex_flow="row", align_items="stretch"
+        )
 
         self.vbox = VBox(
             [
@@ -67,7 +70,9 @@ class StructuralCollocationAnalysis(SCA):
         self.add_collocates(self.text_to_collocate())
 
     def load_col_options(self):
-        self.colloc_selector.options = {f"{_[0]}-{_[1]}": _ for _ in self.collocates}
+        self.colloc_selector.options = {
+            f"{_[0]}-{_[1]}": _ for _ in self.collocates
+        }
 
     def count_collocates(self):
         selected_collocates = set(self.colloc_selector.get_interact_value())
