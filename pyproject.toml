@@ -58,7 +58,7 @@ testpaths = ["tests"]
 pythonpath = "src"
 
 [dependency-groups]
-test = [
+dev = [
   "pytest",
   "pytest-cov",
   "coverage-badge"
