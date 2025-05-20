@@ -65,6 +65,7 @@ class SCA:
         self.db_path = Path(db_path)
         self.yaml_path = self.db_path.with_suffix(".yml")
         self.id_col = id_col
+        self.text_column = "speech_fk"
 
         if not self.db_path.exists():
             self.seed_db(tsv_path)
@@ -86,9 +87,7 @@ class SCA:
     def settings_dict(self):
         settings = {
             "db_path": str(
-                self.db_path.resolve().relative_to(
-                    self.yaml_path.resolve().parent
-                )
+                self.db_path.resolve().relative_to(self.yaml_path.resolve().parent)
             ),
             # Source file w/ hash?
             "collocates": self.collocates,
@@ -108,9 +107,7 @@ class SCA:
             settings = safe_load(f)
 
         self.db_path = Path(settings_path).parent / Path(settings["db_path"])
-        self.collocates = set(
-            tuple(collocate) for collocate in settings["collocates"]
-        )
+        self.collocates = set(tuple(collocate) for collocate in settings["collocates"])
         self.id_col = settings["id_col"]
 
     def _add_term(self, term):
@@ -147,12 +144,10 @@ class SCA:
                         )
                         data = []
             if len(data) > 0:
-                conn.executemany(
-                    f"INSERT INTO raw ({headers}) values ({qmarks})", data
-                )
+                conn.executemany(f"INSERT INTO raw ({headers}) values ({qmarks})", data)
 
             conn.execute(
-                "CREATE TABLE collocate_window (speech_fk, pattern1, pattern2, window)"
+                f"CREATE TABLE collocate_window ({self.text_column}, pattern1, pattern2, window)"
             )
 
             conn.commit()
@@ -175,13 +170,9 @@ class SCA:
         data = {"table": cleaned_pattern}
         if (
             not (cleaned_pattern,)
-            in self.conn.execute(
-                "select tbl_name from sqlite_master"
-            ).fetchall()
+            in self.conn.execute("select tbl_name from sqlite_master").fetchall()
         ):
-            self.conn.execute(
-                f"create table {cleaned_pattern} (speech_fk)", data
-            )
+            self.conn.execute(f"create table {cleaned_pattern} (speech_fk)", data)
             self.conn.execute(
                 f'insert into {cleaned_pattern} select {self.id_col} from raw where speech_text like "%" || :table || "%"',
                 data,
@@ -249,9 +240,7 @@ class SCA:
         clean_terms = set()
         for collocate in collocates:
             clean_pair = {
-                cleaner(pattern)
-                for pattern in collocate
-                if not str(pattern).isdigit()
+                cleaner(pattern) for pattern in collocate if not str(pattern).isdigit()
             }
 
             if len(clean_pair) != 2:
@@ -278,7 +267,9 @@ class SCA:
             self.collocate_to_condition(p1, p2, w) for p1, p2, w in collocates
         )
 
-        id_query = f" (select distinct speech_fk from collocate_window where {conditions}) "
+        id_query = (
+            f" (select distinct speech_fk from collocate_window where {conditions}) "
+        )
 
         return id_query
 
@@ -400,17 +391,13 @@ class SCA:
 class Speech:
     def __init__(self, speech_id, raw_text, collocates):
         self.speech_id = speech_id
-        self.tokens = [
-            Token(self, raw_token) for raw_token in tokenizer(raw_text)
-        ]
+        self.tokens = [Token(self, raw_token) for raw_token in tokenizer(raw_text)]
         self.collocates = collocates
 
         self.collocate_tokens = []
 
         self.patterns = set(
-            pattern
-            for collocate in self.collocates
-            for pattern in collocate[:2]
+            pattern for collocate in self.collocates for pattern in collocate[:2]
         )
 
 
@@ -424,9 +411,7 @@ class Token:
         self.sw_pos = pos
 
         self.coll_patterns = [
-            pattern
-            for pattern in self.speech.patterns
-            if fnmatch(self.token, pattern)
+            pattern for pattern in self.speech.patterns if fnmatch(self.token, pattern)
         ]
 
         if len(self.coll_patterns) > 0:
