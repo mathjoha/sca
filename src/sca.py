@@ -234,7 +234,7 @@ class SCA:
             data.append((None, pattern1, pattern2, None))
 
         self.conn.executemany(
-            "insert into collocate_window (speech_fk, pattern1, pattern2, window) values (?, ?, ?, ?)",
+            f"insert into collocate_window ({self.text_column}, pattern1, pattern2, window) values (?, ?, ?, ?)",
             data,
         )
         self.conn.commit()
@@ -276,7 +276,7 @@ class SCA:
             self.collocate_to_condition(p1, p2, w) for p1, p2, w in collocates
         )
 
-        id_query = f" (select distinct speech_fk from collocate_window where {conditions}) "
+        id_query = f" (select distinct {self.text_column} from collocate_window where {conditions}) "
 
         return id_query
 
@@ -351,7 +351,7 @@ class SCA:
 
         data = []
         for speech_fk, text in self.conn.execute(
-            f"select {self.id_col}, speech_text from raw where speechid in {id_query}"
+            f"select {self.id_col}, {self.text_column} from raw where {self.id_col} in {id_query}"
         ):
             sw_pos_adjust = 0
             speech_data = []
