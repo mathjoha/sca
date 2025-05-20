@@ -24,7 +24,10 @@ def temp_dir():
 def sca_filled(temp_dir, tsv_file):
     db_path = temp_dir / "sca.sqlite3"
     corpus = sca.from_tsv(
-        db_path=db_path, tsv_path=tsv_file, id_col="speech_id"
+        db_path=db_path,
+        tsv_path=tsv_file,
+        id_col="speech_id",
+        text_column="speech_text",
     )
     corpus.add_collocates((("govern*", "minister*"),))
     corpus.save()

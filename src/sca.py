@@ -43,9 +43,16 @@ def get_min_window(pos1, pos2):
     return min(abs(p1 - p2) for p1 in pos1 for p2 in pos2)
 
 
-def from_tsv(tsv_path: str | Path, db_path: str | Path, id_col: str):
+def from_tsv(
+    tsv_path: str | Path, db_path: str | Path, id_col: str, text_column: str
+):
     corpus = SCA()
-    corpus.read_tsv(db_path=db_path, tsv_path=tsv_path, id_col=id_col)
+    corpus.read_tsv(
+        db_path=db_path,
+        tsv_path=tsv_path,
+        id_col=id_col,
+        text_column=text_column,
+    )
 
     return corpus
 
@@ -60,12 +67,18 @@ class SCA:
     db_path = Path("sca.sqlite3")
 
     def read_tsv(
-        self, db_path="sca.sqlite3", tsv_path: Path | None = None, id_col=None
+        self,
+        tsv_path: Path | str,
+        id_col: str,
+        text_column: str,
+        db_path="sca.sqlite3",
     ):
         self.db_path = Path(db_path)
+
         self.yaml_path = self.db_path.with_suffix(".yml")
+
         self.id_col = id_col
-        self.text_column = "speech_fk"
+        self.text_column = text_column
 
         if not self.db_path.exists():
             self.seed_db(tsv_path)
