@@ -139,6 +139,25 @@ class SCA:
             f"Initialized SCA with language '{language}' and {len(self.stopwords)} stopwords"
         )
 
+    def load_stopwords_from_file(self, file_path: str | Path):
+        """Load custom stopwords from a text file.
+
+        Args:
+            file_path: Path to a text file containing stopwords, one per line.
+
+        Raises:
+            FileNotFoundError: If the specified file does not exist.
+        """
+        file_path = Path(file_path)
+        if not file_path.exists():
+            raise FileNotFoundError(f"Stopwords file not found: {file_path}")
+
+        custom_stopwords = file_path.read_text().splitlines()
+        self.stopwords.update(custom_stopwords)
+        logger.info(
+            f"Added {len(custom_stopwords)} custom stopwords from {file_path}"
+        )
+
     def read_file(
         self,
         tsv_path: Path | str,

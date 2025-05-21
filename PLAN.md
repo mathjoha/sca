@@ -16,8 +16,8 @@
     ```
 
 ## 2. Add Custom Stopwords Support
-1. Add method to load stopwords from file
-    - Happy path test: Test loading stopwords from file
+1. Add method to load stopwords from file ✅
+    - Happy path test: Test loading stopwords from file ✅
     ```python
     def test_load_stopwords_from_file(tmp_path):
         # Create test file
@@ -29,11 +29,11 @@
         assert "custom1" in corpus.stopwords
         assert "custom2" in corpus.stopwords
     ```
-    - Implement feature:
-        - Add load_stopwords_from_file method
-        - Support txt files with one word per line
-        - Add validation for file format
-    - Unhappy path test: Test invalid file formats and missing files
+    - Implement feature: ✅
+        - Add load_stopwords_from_file method ✅
+        - Support txt files with one word per line ✅
+        - Add validation for file format ✅
+    - Unhappy path test: Test invalid file formats and missing files ✅
     ```python
     def test_invalid_stopwords_file():
         with pytest.raises(FileNotFoundError):

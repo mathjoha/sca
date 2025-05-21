@@ -35,3 +35,19 @@ def test_load_invalid_language(tmpdir: Path):
         ValueError, match="Invalid language code 'invalid_lang'"
     ):
         from_yml(yml_path)
+
+
+def test_load_stopwords_from_file(tmp_path):
+    sw_file = tmp_path / "custom_stopwords.txt"
+    sw_file.write_text("custom1\ncustom2\ncustom3")
+
+    corpus = SCA()
+    corpus.load_stopwords_from_file(sw_file)
+    assert "custom1" in corpus.stopwords
+    assert "custom2" in corpus.stopwords
+
+
+def test_invalid_stopwords_file():
+    with pytest.raises(FileNotFoundError):
+        corpus = SCA()
+        corpus.load_stopwords_from_file("nonexistent.txt")
