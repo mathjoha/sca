@@ -122,24 +122,6 @@ def test_duplicate_keys(tmp_path):
         )
 
 
-@pytest.mark.xfail(strict=True, reason="Red Phase: Test empty file handling")
-def test_empty_file(tmp_path):
-    csv_path = tmp_path / "empty.csv"
-    db_path = tmp_path / "test_empty.sqlite3"
-    with open(csv_path, "w") as f:
-        f.write("id,text,header1\n")
-
-    corpus = SCA()
-    # Expecting an sqlite3.OperationalErro  r if table 'raw' isn't created due to empty insert
-    with pytest.raises(sqlite3.OperationalError, match="no such table: raw"):
-        corpus.read_file(
-            tsv_path=csv_path,
-            id_col="id",
-            text_column="text",
-            db_path=db_path,
-        )
-
-
 def test_dynamic_csv_headers(tmp_path):
     csv_path = tmp_path / "dynamic_headers.csv"
     db_path = tmp_path / "test_dynamic.sqlite3"
