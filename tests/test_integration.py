@@ -45,6 +45,39 @@ def sca_instance(sca_initial_data):
     return sca_initial_data
 
 
+@pytest.fixture
+def sca_with_hello_world_collocates(sca_initial_data):
+    """SCA instance after ('hello', 'world') has been added as a collocate."""
+    sca = sca_initial_data
+    collocate_pair = ("hello", "world")
+    sca.add_collocates([collocate_pair])
+    return sca
+
+
+@pytest.fixture
+def sca_with_test_collocate_group(sca_initial_data):
+    """SCA instance after creating a collocate group named 'test_hw_group'."""
+    sca = sca_initial_data
+    if ("hello", "world") not in sca.collocates:
+        sca.add_collocates([("hello", "world")])
+    group_name = "test_hw_group"
+    collocates_for_group = [("hello", "world", 5)]
+    table_name_expected = "group_" + group_name
+    sca.create_collocate_group(group_name, collocates_for_group)
+    return sca, table_name_expected
+
+
+@pytest.fixture
+def sca_after_empty_pattern_collocate_error(sca_initial_data):
+    """SCA instance after attempting to add a collocate that cleans to an empty string."""
+    sca = sca_initial_data
+    try:
+        sca.add_collocates([("!@#", "world")])
+    except sqlite3.OperationalError:
+        pass  # Expected error
+    return sca
+
+
 class TestFileAndConfigLoading:
     """Tests for file reading, database seeding, and configuration loading."""
 
@@ -203,42 +236,76 @@ class TestFileAndConfigLoading:
 class TestSCAOperations:
     """Tests for SCA analytical methods using a pre-populated instance."""
 
-    def test_add_and_mark_collocates_populates_db_and_internal_state(
-        self, sca_initial_data
+    def test_add_collocates_db_row_count_correct(
+        self, sca_with_hello_world_collocates
     ):
-        # Arrange
-        sca = sca_initial_data
-        collocate_pair = ("hello", "world")
+        # Arrange: Done by sca_with_hello_world_collocates fixture
+        sca = sca_with_hello_world_collocates
 
-        # Act
-        sca.add_collocates([collocate_pair])
-
-        # Assert
-        # Check database
+        # Act: Query the database
         conn = sqlite3.connect(sca.db_path)
         cursor = conn.cursor()
         cursor.execute(
-            f"SELECT {sca.text_column}, pattern1, pattern2 FROM collocate_window WHERE window IS NOT NULL"
+            f"SELECT {sca.text_column} FROM collocate_window WHERE window IS NOT NULL"
         )
         rows = cursor.fetchall()
         conn.close()
 
+        # Assert
         assert (
             len(rows) == 3
-        ), "Expected 3 collocations for 'hello' and 'world' in DB"
+        ), "Expected 3 total collocations in DB for ('hello', 'world')"
 
-        found_collocation_for_speech1_db = any(
-            row[0] == "1" and row[1] == "hello" and row[2] == "world"
-            for row in rows
+    def test_add_collocates_db_has_speech1_collocation(
+        self, sca_with_hello_world_collocates
+    ):
+        # Arrange: Done by sca_with_hello_world_collocates fixture
+        sca = sca_with_hello_world_collocates
+
+        # Act: Query the database for the specific collocation
+        conn = sqlite3.connect(sca.db_path)
+        cursor = conn.cursor()
+        cursor.execute(
+            f"SELECT COUNT(*) FROM collocate_window "
+            f"WHERE {sca.text_column} = '1' AND pattern1 = 'hello' AND pattern2 = 'world' AND window IS NOT NULL"
         )
-        assert (
-            found_collocation_for_speech1_db
-        ), "Expected collocation for speech_id '1' in DB"
+        count = cursor.fetchone()[0]
+        conn.close()
 
-        # Check internal SCA state
-        assert "hello" in sca.terms
-        assert "world" in sca.terms
-        assert collocate_pair in sca.collocates
+        # Assert
+        assert (
+            count == 1
+        ), "Expected specific collocation for speech_id '1' ('hello', 'world') in DB"
+
+    def test_add_collocates_updates_internal_terms_with_hello(
+        self, sca_with_hello_world_collocates
+    ):
+        # Arrange: Done by sca_with_hello_world_collocates fixture
+        sca = sca_with_hello_world_collocates
+        # Act: (Implicitly done by fixture)
+        # Assert
+        assert "hello" in sca.terms, "'hello' should be in internal terms list"
+
+    def test_add_collocates_updates_internal_terms_with_world(
+        self, sca_with_hello_world_collocates
+    ):
+        # Arrange: Done by sca_with_hello_world_collocates fixture
+        sca = sca_with_hello_world_collocates
+        # Act: (Implicitly done by fixture)
+        # Assert
+        assert "world" in sca.terms, "'world' should be in internal terms list"
+
+    def test_add_collocates_updates_internal_collocates_set(
+        self, sca_with_hello_world_collocates
+    ):
+        # Arrange: Done by sca_with_hello_world_collocates fixture
+        sca = sca_with_hello_world_collocates
+        collocate_pair = ("hello", "world")
+        # Act: (Implicitly done by fixture)
+        # Assert
+        assert (
+            collocate_pair in sca.collocates
+        ), "('hello', 'world') should be in internal collocates set"
 
     def test_counts_by_subgroups_generates_correct_output_file(
         self, sca_initial_data, tmp_path
@@ -550,35 +617,43 @@ class TestSCAOperations:
 
     # --- End of refactored edge case tests ---
 
-    def test_create_collocate_group_creates_table_and_adds_data(
-        self, sca_initial_data
+    def test_create_collocate_group_table_exists(
+        self, sca_with_test_collocate_group
     ):
-        # Arrange
-        sca = sca_initial_data
-        sca.add_collocates([("hello", "world")])  # Prerequisite
+        # Arrange: Done by fixture
+        sca, table_name_expected = sca_with_test_collocate_group
 
-        group_name = "test_hw_group"
-        collocates_for_group = [("hello", "world", 5)]
-        table_name_expected = "group_" + group_name
-
-        # Act
-        sca.create_collocate_group(group_name, collocates_for_group)
-
-        # Assert: Table creation and schema
+        # Act: Connect and check for table
         conn = sqlite3.connect(sca.db_path)
         cursor = conn.cursor()
         cursor.execute(
             "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
             (table_name_expected,),
         )
+        table_exists = cursor.fetchone()
+        conn.close()
+
+        # Assert
         assert (
-            cursor.fetchone() is not None
+            table_exists is not None
         ), f"Table {table_name_expected} was not created."
 
+    def test_create_collocate_group_table_schema_correct(
+        self, sca_with_test_collocate_group
+    ):
+        # Arrange: Done by fixture
+        sca, table_name_expected = sca_with_test_collocate_group
+
+        # Act: Connect and get schema
+        conn = sqlite3.connect(sca.db_path)
+        cursor = conn.cursor()
         cursor.execute(f"PRAGMA table_info({table_name_expected})")
         schema_info = {
             row[1] for row in cursor.fetchall()
         }  # set of column names
+        conn.close()
+
+        # Assert
         expected_cols_in_schema = {
             "text_fk",
             "raw_text",
@@ -592,12 +667,23 @@ class TestSCAOperations:
             schema_info
         ), f"Expected columns missing in {table_name_expected}. Got {schema_info}"
 
-        # Assert: Data insertion (simple check for non-empty)
+    def test_create_collocate_group_table_has_data(
+        self, sca_with_test_collocate_group
+    ):
+        # Arrange: Done by fixture
+        sca, table_name_expected = sca_with_test_collocate_group
+
+        # Act: Connect and count rows
+        conn = sqlite3.connect(sca.db_path)
+        cursor = conn.cursor()
         cursor.execute(f"SELECT COUNT(*) FROM {table_name_expected}")
-        assert (
-            cursor.fetchone()[0] > 0
-        ), f"Table {table_name_expected} should contain data."
+        row_count = cursor.fetchone()[0]
         conn.close()
+
+        # Assert
+        assert (
+            row_count > 0
+        ), f"Table {table_name_expected} should contain data."
 
     def test_counts_by_subgroups_with_empty_collocates_list_raises_db_error(
         self, sca_initial_data, tmp_path
@@ -631,23 +717,45 @@ class TestSCAOperations:
         # Arrange
         sca = sca_initial_data
         initial_collocates_count = len(sca.collocates)
-        # "!@#" cleans to "", which causes tabulate_term("") to try "CREATE TABLE ()"
+        initial_terms_count = len(sca.terms)  # Capture initial terms count
 
-        # Act & Assert
+        # Act & Assert for the exception
         with pytest.raises(
             sqlite3.OperationalError, match=r'near "\(": syntax error'
         ):
             sca.add_collocates([("!@#", "world")])
 
+        # Assert state immediately after expected error
         assert (
             len(sca.collocates) == initial_collocates_count
-        ), "Collocates should not be added if a pattern cleans to empty and causes DB error."
+        ), "Collocates set should not change after the error."
         assert (
             "" not in sca.terms
         ), "Empty string should not be added as a term."
+        # Check if 'world' was added before the error, if it wasn't there already
+        # This depends on the internal logic of add_collocates if terms are added before DB op.
+        # For a stricter check on what happened to terms:
+        if (
+            "world" not in sca_initial_data.terms
+        ):  # If world wasn't an initial term
+            assert (
+                "world" not in sca.terms
+            ), "'world' should not be added if operation failed mid-way for empty pattern."
+        else:
+            assert (
+                len(sca.terms) == initial_terms_count
+            ), "Terms set should not change if 'world' was already a term."
 
-        # Verify instance is still usable for valid operations
+    def test_sca_usable_after_empty_pattern_collocate_error(
+        self, sca_after_empty_pattern_collocate_error
+    ):
+        # Arrange: Done by fixture
+        sca = sca_after_empty_pattern_collocate_error
+
+        # Act: Try a valid operation
         sca.add_collocates([("newvalid", "pairvalid")])
+
+        # Assert: Valid operation succeeds
         assert ("newvalid", "pairvalid") in sca.collocates
         assert "newvalid" in sca.terms
         assert "pairvalid" in sca.terms
