@@ -104,10 +104,6 @@ def test_term_tables_prevent_duplicate_text_fk(tmp_path: Path):
     conn.close()
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="Red Phase: DB uniqueness for named_collocate not yet implemented",
-)
 def test_named_collocate_prevents_duplicates(tmp_path: Path):
     db_path = tmp_path / "test_named_collocate.sqlite3"
     tsv_content = "id\ttext\ntext1\tAlice met Bob.\ntext2\tCharlie met David."
@@ -115,30 +111,39 @@ def test_named_collocate_prevents_duplicates(tmp_path: Path):
         tmp_path, filename="named_collocate_test.tsv", content=tsv_content
     )
 
-    sca_instance = SCA(spacy_model_name="en_core_web_sm")
+    sca_instance = SCA()
     sca_instance.read_file(
         tsv_path=tsv_path, id_col="id", text_column="text", db_path=db_path
     )
 
-    group_name = "PERSON_PERSON"
-    sca_instance.create_collocate_group(
-        group_name,
-        ["PERSON"],
-        ["PERSON"],
-        load_POS_tags=True,
-        load_NER_tags=True,
-    )
+    group_name = "test_group"
+    collocates = [("Alice*", "Bob*", 5), ("Charlie*", "David*", 5)]
+
+    sca_instance.create_collocate_group(group_name, collocates)
+
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM named_collocate")
+    rows = cursor.fetchall()
+    assert len(rows) == 2, "Expected two entries in named_collocate table"
 
     # Attempt to create the same collocate group again, which should populate named_collocate
     # and trigger an IntegrityError if uniqueness is enforced.
     with pytest.raises(sqlite3.IntegrityError):
-        sca_instance.create_collocate_group(
-            group_name,
-            ["PERSON"],
-            ["PERSON"],
-            load_POS_tags=True,
-            load_NER_tags=True,
+        cursor.execute(
+            "INSERT INTO named_collocate (name, table_name, term1, term2, window) VALUES (?, ?, ?, ?, ?)",
+            (group_name, f"group_{group_name}", "Alice*", "Bob*", 5),
         )
+        conn.commit()
+
+    sca_instance.create_collocate_group(group_name, collocates)
+    cursor.execute("SELECT * FROM named_collocate")
+    rows = cursor.fetchall()
+    assert len(rows) == 2, "Expected two entries in named_collocate table"
+    conn.close()
+
+    conn.close()
 
 
 @pytest.mark.xfail(strict=True, reason="Red Phase [Expand as necessary]")
