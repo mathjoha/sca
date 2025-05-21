@@ -19,9 +19,6 @@ def create_dummy_csv(file_path: Path, num_headers: int, num_rows: int):
     df.to_csv(file_path, index=False)
 
 
-@pytest.mark.xfail(
-    strict=True, reason="Red Phase: Test for dynamic CSV headers"
-)
 def test_dynamic_csv_headers(tmp_path):
     csv_path = tmp_path / "dynamic_headers.csv"
     db_path = tmp_path / "test_dynamic.sqlite3"
@@ -68,9 +65,6 @@ def test_dynamic_csv_headers(tmp_path):
         # or checking against a list of SQLite keywords.
 
 
-@pytest.mark.xfail(
-    strict=True, reason="Red Phase: Test for dynamic TSV headers"
-)
 def test_dynamic_tsv_headers(tmp_path):
     tsv_path = tmp_path / "dynamic_headers.tsv"
     db_path = tmp_path / "test_dynamic_tsv.sqlite3"
@@ -213,9 +207,6 @@ def test_empty_file(tmp_path):
         )
 
 
-@pytest.mark.xfail(
-    strict=True, reason="Red Phase: Test file with only id and text columns"
-)
 def test_file_only_id_text(tmp_path):
     csv_path = tmp_path / "only_id_text.csv"
     db_path = tmp_path / "test_only_id_text.sqlite3"
