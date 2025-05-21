@@ -376,12 +376,18 @@ class SCA:
         table_name = "group_" + name.strip().replace(" ", "_")
 
         self.conn.execute(
-            f"insert into named_collocate (name, table_name, term1, term2, window) values ({name}, {table_name}, ?, ?, ?)",
+            f"""
+            insert into named_collocate (name, table_name, term1, term2, window)
+            values ({name}, {table_name}, ?, ?, ?)
+            """,
             collocates,
         )
 
         self.conn.execute(
-            f"create table {table_name} (speech_fk, raw_text, token, sw, conterm, collocate_begin, collocate_end)"
+            f"""
+            create table {table_name} (speech_fk, raw_text, token,
+            sw, conterm, collocate_begin, collocate_end)
+            """
         )
 
         id_query = self.collocate_to_speech_query(collocates)
@@ -399,9 +405,11 @@ class SCA:
                 (pattern1, window),
             }
 
-        data = []
         for speech_fk, text in self.conn.execute(
-            f"select {self.id_col}, {self.text_column} from raw where {self.id_col} in {id_query}"
+            f"""
+            select {self.id_col}, {self.text_column} from raw
+            where {self.id_col} in {id_query}
+            """
         ):
             sw_pos_adjust = 0
             speech_data = []
