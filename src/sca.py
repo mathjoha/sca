@@ -255,7 +255,10 @@ class SCA:
             data.append((None, pattern1, pattern2, None))
 
         self.conn.executemany(
-            f"insert into collocate_window ({self.text_column}, pattern1, pattern2, window) values (?, ?, ?, ?)",
+            f"""
+            insert into collocate_window ({self.text_column},
+            pattern1, pattern2, window)
+            values (?, ?, ?, ?)""",
             data,
         )
         self.conn.commit()
