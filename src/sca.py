@@ -329,14 +329,27 @@ class SCA:
     def counts_by_subgroups(self, collocates, out_file):
         # todo: test pre-calculating the baseline
         df_baseline = pd.read_sql_query(
-            "select parliament, party, party_in_power, district_class, seniority, count(rowid) as total from raw group by parliament, party, party_in_power, district_class, seniority",
+            """
+            select parliament, party, party_in_power, district_class,
+            seniority, count(rowid) as total
+            from raw
+            group by parliament, party, party_in_power,
+            district_class, seniority
+            """,
             self.conn,
         ).fillna("N/A")
 
         id_query = self.collocate_to_speech_query(collocates)
 
         df_collocates = pd.read_sql_query(
-            f"select parliament, party, party_in_power, district_class, seniority, count(rowid) as collocate_count from raw where {self.id_col} in {id_query} group by parliament, party, party_in_power, district_class, seniority",
+            f"""
+            select parliament, party, party_in_power, district_class,
+            seniority, count(rowid) as collocate_count
+            from raw
+            where {self.id_col} in {id_query}
+            group by parliament, party, party_in_power,
+            district_class, seniority
+            """,
             self.conn,
         )
 
