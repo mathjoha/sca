@@ -222,7 +222,11 @@ class SCA:
             ),
             desc=f"Calculating windows for {pattern1} - {pattern2}",
             total=self.conn.execute(
-                f"select count(*) from {clean1} join {clean2} on {clean1}.speech_fk == {clean2}.speech_fk"
+                f"""
+                select count(*) from {clean1}
+                join {clean2}
+                on {clean1}.speech_fk == {clean2}.speech_fk
+                """
             ).fetchone()[0],
         ):
             pos_dict = self.get_positions(
