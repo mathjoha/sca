@@ -8,6 +8,7 @@ from fnmatch import fnmatch
 from pathlib import Path
 
 import pandas as pd
+import sqlite_utils
 from nltk.corpus import stopwords
 from tqdm.auto import tqdm
 from yaml import safe_dump, safe_load
@@ -134,42 +135,28 @@ class SCA:
         }
 
     def seed_db(self, source_path):
-        with sqlite3.connect(self.db_path) as conn:
-            with open(source_path, "r", encoding="utf8") as f:
-                next(f)
-                c = 0
-                for _ in f:
-                    c += 1
+        db = sqlite_utils.Database(self.db_path)
 
-            with open(source_path, "r", encoding="utf8") as f:
-                data = []
-                line = next(f)
-                headers = ",".join(line.rstrip().split("\t"))
-                qmarks = ",".join("?" for _ in line.split("\t"))
-                conn.execute(f"CREATE TABLE raw ({headers})")
-                conn.execute(
-                    f"CREATE UNIQUE INDEX index_sentence on raw ({self.id_col})"
-                )
-
-                for i, line in tqdm(enumerate(f), total=c):
-                    data.append(line.split("\t"))
-
-                    if len(data) == 500_000:
-                        conn.executemany(
-                            f"INSERT INTO raw ({headers}) values ({qmarks})",
-                            data,
-                        )
-                        data = []
-            if len(data) > 0:
-                conn.executemany(
-                    f"INSERT INTO raw ({headers}) values ({qmarks})", data
-                )
-
-            conn.execute(
-                f"CREATE TABLE collocate_window ({self.text_column}, pattern1, pattern2, window)"
+        with open(source_path, "rb") as f:
+            rows, _ = sqlite_utils.utils.rows_from_file(
+                f,
+                dialect="tsv",
+                encoding="utf8",
+                format=sqlite_utils.utils.Format.TSV,
             )
 
-            conn.commit()
+            db["raw"].insert_all(rows)
+
+        db["raw"].create_index([self.id_col], unique=True)
+
+        db["collocate_window"].create(
+            {
+                self.text_column: str,
+                "pattern1": str,
+                "pattern2": str,
+                "window": int,
+            }
+        )
 
     def get_positions(self, tokens, count_stopwords=False, *patterns):
         pos_dict = {_: [] for _ in patterns}
