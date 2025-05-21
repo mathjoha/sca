@@ -118,6 +118,7 @@ class SCA:
         settings["collocates"] = list(settings["collocates"])
         settings["id_col"] = self.id_col
         settings["text_column"] = self.text_column
+        settings["columns"] = list(self.columns)
         with open(self.yaml_path, "w", encoding="utf8") as f:
             safe_dump(data=settings, stream=f)
 
@@ -132,6 +133,7 @@ class SCA:
         )
         self.id_col = settings["id_col"]
         self.text_column = settings["text_column"]
+        self.columns = list(settings["columns"])
 
     def _add_term(self, term):
         self.tabulate_term(term)
@@ -157,6 +159,10 @@ class SCA:
             raise AttributeError(
                 f"Column {self.text_column} not found in {source_path}"
             )
+        data.columns = [
+            col.strip().replace(" ", "_").lower() for col in data.columns
+        ]
+        self.columns = set(data.columns) - {self.id_col, self.text_column}
 
         db["raw"].insert_all(data.to_dict(orient="records"))
 
