@@ -137,21 +137,23 @@ class SCA:
     def seed_db(self, source_path):
         db = sqlite_utils.Database(self.db_path)
 
-        format = (
-            sqlite_utils.utils.Format.TSV
-            if source_path.suffix.lower() == ".tsv"
-            else None
-        )
+        if source_path.suffix.lower() == ".tsv":
+            sep = "\t"
+        else:
+            sep = ","
 
-        with open(source_path, "rb") as f:
-            rows, _ = sqlite_utils.utils.rows_from_file(
-                f,
-                dialect=source_path.suffix,
-                encoding="utf8",
-                format=format,
+        data = pd.read_csv(source_path, sep=sep)
+
+        if self.id_col not in data.columns:
+            raise AttributeError(
+                f"Column {self.id_col} not found in {source_path}"
+            )
+        if self.text_column not in data.columns:
+            raise AttributeError(
+                f"Column {self.text_column} not found in {source_path}"
             )
 
-            db["raw"].insert_all(rows)
+        db["raw"].insert_all(data.to_dict(orient="records"))
 
         db["raw"].create_index([self.id_col], unique=True)
 
