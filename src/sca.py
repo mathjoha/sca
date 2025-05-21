@@ -211,7 +211,13 @@ class SCA:
         data = []
         for speech_id, text in tqdm(
             self.conn.execute(
-                f"select {self.id_col}, speech_text from raw join {clean1} on {clean1}.speech_fk == {self.id_col} join {clean2} on {clean2}.speech_fk == {self.id_col}",
+                f"""
+                select {self.id_col}, speech_text from raw
+                join {clean1}
+                on {clean1}.speech_fk == {self.id_col}
+                join {clean2}
+                on {clean2}.speech_fk == {self.id_col}
+                """,
                 {"term1": clean2, "term2": clean2},
             ),
             desc=f"Calculating windows for {pattern1} - {pattern2}",
