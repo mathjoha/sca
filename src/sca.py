@@ -191,7 +191,7 @@ class SCA:
             "select tbl_name from sqlite_master"
         ).fetchall():
             self.conn.execute(
-                f"create table {cleaned_pattern} (speech_fk)",
+                f"create table {cleaned_pattern} (text_fk)",
                 data,
             )
             self.conn.execute(
@@ -220,9 +220,9 @@ class SCA:
                 f"""
                 select {self.id_col}, speech_text from raw
                 join {clean1}
-                on {clean1}.speech_fk == {self.id_col}
+                on {clean1}.text_fk == {self.id_col}
                 join {clean2}
-                on {clean2}.speech_fk == {self.id_col}
+                on {clean2}.text_fk == {self.id_col}
                 """,
                 {"term1": clean2, "term2": clean2},
             ),
@@ -231,7 +231,7 @@ class SCA:
                 f"""
                 select count(*) from {clean1}
                 join {clean2}
-                on {clean1}.speech_fk == {clean2}.speech_fk
+                on {clean1}.text_fk == {clean2}.text_fk
                 """
             ).fetchone()[0],
         ):
@@ -392,7 +392,7 @@ class SCA:
 
         self.conn.execute(
             f"""
-            create table {table_name} (speech_fk, raw_text, token,
+            create table {table_name} (text_fk, raw_text, token,
             sw, conterm, collocate_begin, collocate_end)
             """
         )
@@ -412,7 +412,7 @@ class SCA:
                 (pattern1, window),
             }
 
-        for speech_fk, text in self.conn.execute(
+        for text_fk, text in self.conn.execute(
             f"""
             select {self.id_col}, {self.text_column} from raw
             where {self.id_col} in {id_query}
@@ -442,7 +442,7 @@ class SCA:
 
                 speech_data.append(
                     [
-                        speech_fk,
+                        text_fk,
                         pos,
                         sw_pos,
                         raw_token,
