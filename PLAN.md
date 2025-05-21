@@ -4,7 +4,7 @@
 
 3. Modify `create_collocate_group` method:
    - Add unique constraints to `named_collocate` table ✅
-   - Add unique constraints to group tables
+   - Add unique constraints to group tables ✅
    - Add error handling for duplicate entries
 
 Suggested prompt: "Let's implement the uniqueness constraints in the seed_db method"

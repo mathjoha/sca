@@ -840,7 +840,8 @@ class SCA:
         self.conn.execute(
             f"""
             create table {table_name} (text_fk, raw_text, token,
-            sw, conterm, collocate_begin, collocate_end)
+            sw, conterm, collocate_begin, collocate_end,
+            UNIQUE(text_fk, raw_text))
             """
         )
         logger.info(
