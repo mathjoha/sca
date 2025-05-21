@@ -110,7 +110,7 @@ class TestFileAndConfigLoading:
         if db_path.exists():  # Ensure seed_db is called
             db_path.unlink()
 
-        expected_error_msg = "Column id_col_not_present not found"
+        expected_error_msg = r"The specified 'id_col' \('id_col_not_present'\) was not found in the columns of the input file '.*missing_id\.tsv'\. Available columns are: \['some_other_id_col', 'text'\]\. Please ensure the column name is correct and present in the file\."
 
         # Act & Assert
         with pytest.raises(AttributeError, match=expected_error_msg):
@@ -133,7 +133,7 @@ class TestFileAndConfigLoading:
         if db_path.exists():  # Ensure seed_db is called
             db_path.unlink()
 
-        expected_error_msg = "Column text_col_not_present not found"
+        expected_error_msg = r"The specified 'text_column' \('text_col_not_present'\) was not found in the columns of the input file '.*missing_text\.tsv'\. Available columns are: \['id', 'some_other_text_col'\]\. Please ensure the column name is correct and present in the file\."
 
         # Act & Assert
         with pytest.raises(AttributeError, match=expected_error_msg):
@@ -183,7 +183,8 @@ class TestFileAndConfigLoading:
         # Subsequent create_index call fails.
         # Updated: Now expecting ValueError due to changes in seed_db for empty files.
         with pytest.raises(
-            ValueError, match=f"Input file {headers_only_tsv_path} is empty."
+            ValueError,
+            match=rf"The input file '{headers_only_tsv_path}' is empty and does not contain any data\. Please provide a file with content\.",
         ):
             sca.read_file(
                 tsv_path=headers_only_tsv_path,

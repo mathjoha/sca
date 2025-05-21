@@ -173,7 +173,7 @@ class SCA:
                 f"Database file {self.db_path} already exists. Skipping seed."
             )
             raise FileExistsError(
-                f"Trying to seed to an existing database file: {self.db_path}"
+                f"Database file '{self.db_path}' already exists. Seeding is only allowed to a non-existent database. If you intend to re-seed, please provide a new database path or delete the existing file '{self.db_path}'."
             )
 
         self.conn = sqlite3.connect(db_path)
@@ -329,12 +329,15 @@ class SCA:
                 file is empty, if column names are not SQLite-friendly, or if
                 duplicate column names are found.
             AttributeError: If id_col or text_column are not found in the input file.
+            TypeError: If the input file is not a valid TSV or CSV file.
         """
 
         logger.info(f"Starting to seed database from {source_path}")
         if self.text_column == self.id_col:
             logger.error("text_column and id_col cannot be the same.")
-            raise ValueError("text_column and id_col cannot be the same")
+            raise ValueError(
+                f"The 'id_col' ('{self.id_col}') and 'text_column' ('{self.text_column}') parameters cannot specify the same column name. Please provide distinct column names for identifiers and text content."
+            )
 
         db = sqlite_utils.Database(self.db_path)
         logger.info(f"Initialized database object for {self.db_path}")
@@ -351,19 +354,21 @@ class SCA:
 
         if data.empty:
             logger.error(f"Input file {source_path} is empty.")
-            raise ValueError(f"Input file {source_path} is empty.")
+            raise ValueError(
+                f"The input file '{source_path}' is empty and does not contain any data. Please provide a file with content."
+            )
 
         if self.id_col not in data.columns:
             logger.error(f"Column {self.id_col} not found in {source_path}")
             raise AttributeError(
-                f"Column {self.id_col} not found in {source_path}",
+                f"The specified 'id_col' ('{self.id_col}') was not found in the columns of the input file '{source_path}'. Available columns are: {list(data.columns)}. Please ensure the column name is correct and present in the file."
             )
         if self.text_column not in data.columns:
             logger.error(
                 f"Column {self.text_column} not found in {source_path}"
             )
             raise AttributeError(
-                f"Column {self.text_column} not found in {source_path}"
+                f"The specified 'text_column' ('{self.text_column}') was not found in the columns of the input file '{source_path}'. Available columns are: {list(data.columns)}. Please ensure the column name is correct and present in the file."
             )
 
         for column_name in data.columns:
@@ -386,9 +391,7 @@ class SCA:
 
         if len(self.columns) != (len(data.columns) - 2):
             logger.error(f"Duplicate column names found: {self.columns}")
-            raise ValueError(
-                "Duplicate column names found." + ", ".join(self.columns)
-            )
+            raise ValueError("Duplicate column names found.")
 
         self.set_data_cols()
 
