@@ -1,6 +1,7 @@
 import sqlite3
 from pathlib import Path
 
+# Test integration for SCA module
 import pandas as pd
 import pytest
 
