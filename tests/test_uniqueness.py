@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from sca.corpus import SCA
+from sca import SCA
 
 
 def create_minimal_tsv(
