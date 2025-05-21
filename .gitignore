@@ -18,3 +18,6 @@ __pycache__/
 *.sqlite3
 *.yml
 *.yaml
+
+.coverage.*
+.cursor/

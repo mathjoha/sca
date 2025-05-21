@@ -56,7 +56,7 @@ addopts = [
     "--import-mode=importlib",
 ]
 testpaths = ["tests"]
-pythonpath = "src"
+pythonpath = "src/sca/"
 
 [dependency-groups]
 dev = [

@@ -1,5 +1,4 @@
 from pathlib import Path
-from tempfile import mkdtemp
 
 import pytest
 from yaml import safe_load
@@ -106,6 +105,18 @@ def test_set_name_id_col(db_path, tsv_file: Path):
             tsv_path=tsv_file,
             id_col="id_col_name",
             text_column="speech_text",
+        )
+
+
+def test_set_name_text_column(db_path, tsv_file: Path):
+    with pytest.raises(
+        AttributeError, match="Column speech_text_name not found"
+    ):
+        sca.from_file(
+            db_path=db_path.parent / "speech_sca.sqlite3",
+            tsv_path=tsv_file,
+            id_col="speech_id",
+            text_column="speech_text_name",
         )
 
 
