@@ -224,7 +224,7 @@ class SCA:
         for speech_id, text in tqdm(
             self.conn.execute(
                 f"""
-                select {self.id_col}, speech_text from raw
+                select {self.id_col}, {self.text_column} from raw
                 join {clean1}
                 on {clean1}.text_fk == {self.id_col}
                 join {clean2}
