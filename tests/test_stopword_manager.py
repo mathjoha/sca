@@ -110,3 +110,24 @@ def test_invalid_stopwords_config(tmp_path):
 
     with pytest.raises(ValueError, match="Invalid language configuration"):
         corpus.save()
+
+
+@pytest.mark.xfail(
+    strict=True, reason="Red Phase: Verify stopwords handling in get_positions"
+)
+def test_get_positions_with_custom_stopwords():
+    corpus = SCA()
+    corpus.add_stopwords({"custom_stop"})
+
+    tokens = ["word1", "custom_stop", "word2"]
+    positions = corpus.get_positions(tokens, "word*", count_stopwords=False)
+
+    assert positions["word*"] == [0, 2]  # custom_stop is ignored
+
+    positions_with_stopwords = corpus.get_positions(
+        tokens, "word*", count_stopwords=True
+    )
+    assert positions_with_stopwords["word*"] == [
+        0,
+        2,
+    ]  # positions are absolute even with count_stopwords=True
