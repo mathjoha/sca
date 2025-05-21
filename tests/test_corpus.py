@@ -1,4 +1,3 @@
-import sqlite3
 from pathlib import Path
 
 import pandas as pd
@@ -261,3 +260,29 @@ def test_compare_same(tmp_path: Path):
     )
 
     assert corpus_1 == corpus_2
+
+
+def test_compare_different(tmp_path: Path):
+    csv_path = tmp_path / "small_csv.csv"
+    csv_path2 = tmp_path / "small_csv2.csv"
+    db_path = tmp_path / "small_csv.sqlite3"
+    db_path2 = tmp_path / "small_csv2.sqlite3"
+
+    create_dummy_csv(csv_path, 5, 5)
+    create_dummy_csv(csv_path2, 10, 10)
+
+    corpus_1 = SCA()
+    corpus_1.read_file(
+        tsv_path=csv_path,
+        id_col="id",
+        text_column="text",
+        db_path=db_path,
+    )
+    corpus_2 = from_file(
+        tsv_path=csv_path2,
+        id_col="id",
+        text_column="text",
+        db_path=db_path2,
+    )
+
+    assert corpus_1 != corpus_2
