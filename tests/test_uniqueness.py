@@ -110,3 +110,40 @@ def test_term_tables_prevent_duplicate_text_fk(tmp_path: Path):
         conn.commit()
 
     conn.close()
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="Red Phase: DB uniqueness for named_collocate not yet implemented",
+)
+def test_named_collocate_prevents_duplicates(tmp_path: Path):
+    db_path = tmp_path / "test_named_collocate.sqlite3"
+    tsv_content = "id\ttext\ntext1\tAlice met Bob.\ntext2\tCharlie met David."
+    tsv_path = create_minimal_tsv(
+        tmp_path, filename="named_collocate_test.tsv", content=tsv_content
+    )
+
+    sca_instance = SCA(spacy_model_name="en_core_web_sm")
+    sca_instance.read_file(
+        tsv_path=tsv_path, id_col="id", text_column="text", db_path=db_path
+    )
+
+    group_name = "PERSON_PERSON"
+    sca_instance.create_collocate_group(
+        group_name,
+        ["PERSON"],
+        ["PERSON"],
+        load_POS_tags=True,
+        load_NER_tags=True,
+    )
+
+    # Attempt to create the same collocate group again, which should populate named_collocate
+    # and trigger an IntegrityError if uniqueness is enforced.
+    with pytest.raises(sqlite3.IntegrityError):
+        sca_instance.create_collocate_group(
+            group_name,
+            ["PERSON"],
+            ["PERSON"],
+            load_POS_tags=True,
+            load_NER_tags=True,
+        )
