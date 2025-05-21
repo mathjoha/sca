@@ -43,9 +43,7 @@ def get_min_window(pos1, pos2):
     return min(abs(p1 - p2) for p1 in pos1 for p2 in pos2)
 
 
-def from_file(
-    tsv_path: str | Path, db_path: str | Path, id_col: str, text_column: str
-):
+def from_file(tsv_path: str | Path, db_path: str | Path, id_col: str, text_column: str):
     corpus = SCA()
     corpus.read_file(
         db_path=db_path,
@@ -128,9 +126,7 @@ class SCA:
             settings = safe_load(f)
 
         self.db_path = Path(settings_path).parent / Path(settings["db_path"])
-        self.collocates = set(
-            tuple(collocate) for collocate in settings["collocates"]
-        )
+        self.collocates = set(tuple(collocate) for collocate in settings["collocates"])
         self.id_col = settings["id_col"]
         self.text_column = settings["text_column"]
         self.columns = list(settings["columns"])
@@ -163,9 +159,7 @@ class SCA:
             raise AttributeError(
                 f"Column {self.text_column} not found in {source_path}"
             )
-        data.columns = [
-            col.strip().replace(" ", "_").lower() for col in data.columns
-        ]
+        data.columns = [col.strip().replace(" ", "_").lower() for col in data.columns]
         self.columns = set(data.columns) - {self.id_col, self.text_column}
         self.set_data_cols()
 
@@ -292,9 +286,7 @@ class SCA:
         clean_terms = set()
         for collocate in collocates:
             clean_pair = {
-                cleaner(pattern)
-                for pattern in collocate
-                if not str(pattern).isdigit()
+                cleaner(pattern) for pattern in collocate if not str(pattern).isdigit()
             }
 
             if len(clean_pair) != 2:
@@ -387,6 +379,15 @@ class SCA:
 
     def create_collocate_group(self, name, collocates):
         table_name = "group_" + name.strip().replace(" ", "_")
+
+        self.conn.execute(
+            """create table if not exists named_collocate (
+            name text,
+            table_name text,
+            term1 text,
+            term2 text,
+            window integer)"""
+        )
 
         self.conn.execute(
             f"""
