@@ -304,7 +304,10 @@ class SCA:
             self.collocate_to_condition(p1, p2, w) for p1, p2, w in collocates
         )
 
-        id_query = f" (select distinct {self.text_column} from collocate_window where {conditions}) "
+        id_query = (
+            f" (select distinct {self.text_column} from "
+            f"collocate_window where {conditions}) "
+        )
 
         return id_query
 
@@ -312,7 +315,13 @@ class SCA:
         id_query = self.collocate_to_speech_query(collocates)
 
         c = self.conn.execute(
-            f"select parliament, party, party_in_power, district_class, seniority, count(rowid) from raw where {self.id_col} in {id_query} group by parliament, party, party_in_power, district_class, seniority"
+            f"""
+            select parliament, party, party_in_power, district_class,
+            seniority, count(rowid) from raw
+            where {self.id_col} in {id_query}
+            group by parliament, party, party_in_power,
+            district_class, seniority
+            """
         )
 
         return c
