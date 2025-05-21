@@ -4,7 +4,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from sca import SCA
+from sca import SCA, from_file
 
 
 def create_dummy_csv(file_path: Path, num_headers: int, num_rows: int):
@@ -236,3 +236,28 @@ def test_loading(tmp_path: Path):
     assert corpus_write != None
 
     assert corpus_write == corpus_load
+
+
+def test_compare_same(tmp_path: Path):
+    csv_path = tmp_path / "small_csv.csv"
+    db_path = tmp_path / "small_csv.sqlite3"
+    db_path2 = tmp_path / "small_csv2.sqlite3"
+    yml_path = tmp_path / "small_csv.yml"
+
+    create_dummy_csv(csv_path, 5, 5)
+
+    corpus_1 = SCA()
+    corpus_1.read_file(
+        tsv_path=csv_path,
+        id_col="id",
+        text_column="text",
+        db_path=db_path,
+    )
+    corpus_2 = from_file(
+        tsv_path=csv_path,
+        id_col="id",
+        text_column="text",
+        db_path=db_path2,
+    )
+
+    assert corpus_1 == corpus_2
