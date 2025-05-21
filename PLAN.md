@@ -4,11 +4,11 @@
 1. Add language parameter to SCA initialization
     - Happy path test: Test initializing SCA with different languages (e.g., 'english', 'french', 'german') ✅
     - Implement feature:
-        - Move stopwords initialization to SCA class
-        - Add language parameter to __init__
-        - Load stopwords from nltk based on language
-        - Store stopwords in instance variable
-    - Unhappy path test: Test invalid language codes
+        - Move stopwords initialization to SCA class ✅
+        - Add language parameter to __init__ ✅
+        - Load stopwords from nltk based on language ✅
+        - Store stopwords in instance variable ✅
+    - Unhappy path test: Test invalid language codes ✅
     ```python
     def test_invalid_language():
         with pytest.raises(ValueError, match="Invalid language code 'invalid_lang'"):

@@ -338,3 +338,19 @@ def test_seed_db_with_tsv_headers_only_raises_db_error(tmp_path: Path):
             text_column="text",
             db_path=db_path,
         )
+
+
+def test_language_initialization():
+    """Test initializing SCA with different languages."""
+    english_corpus = SCA(language="english")
+    french_corpus = SCA(language="french")
+    german_corpus = SCA(language="german")
+
+    assert "the" in english_corpus.stopwords
+    assert "le" in french_corpus.stopwords
+    assert "der" in german_corpus.stopwords
+
+    with pytest.raises(
+        ValueError, match="Invalid language code 'invalid_lang'"
+    ):
+        SCA(language="invalid_lang")
