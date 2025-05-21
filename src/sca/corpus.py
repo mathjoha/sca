@@ -819,7 +819,8 @@ class SCA:
             table_name text,
             term1 text,
             term2 text,
-            window integer)"""
+            window integer,
+            UNIQUE(name, term1, term2, window))"""
         )
         logger.info("Ensured 'named_collocate' table exists.")
 
