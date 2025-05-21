@@ -553,21 +553,27 @@ class SCA:
             # For tracking that no collocates were found
             data.append((None, pattern1, pattern2, None))
             logger.info(
-                f"No occurrences found for '{pattern1}' - '{pattern2}'. Storing placeholder."
+                f"No occurrences found for '{pattern1}' - '{pattern2}'. "
+                "Storing placeholder."
             )
         else:
             logger.info(
                 f"Found {len(data)} instances for '{pattern1}' - '{pattern2}'."
             )
 
-        self.conn.executemany(
-            f"""
-            insert into collocate_window
-            ({self.id_col}, pattern1, pattern2, window)
-            values (?, ?, ?, ?)""",
-            data,
+        db = sqlite_utils.Database(self.db_path)
+        db["collocate_window"].upsert_all(
+            [
+                {
+                    self.id_col: speech_id,
+                    "pattern1": pattern1,
+                    "pattern2": pattern2,
+                    "window": window,
+                }
+                for speech_id, pattern1, pattern2, window in data
+            ],
+            pk=[self.id_col, "pattern1", "pattern2"],
         )
-        self.conn.commit()
         logger.info(
             f"Stored window information for '{pattern1}' - '{pattern2}' in 'collocate_window' table."
         )
