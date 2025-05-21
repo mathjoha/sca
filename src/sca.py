@@ -48,7 +48,7 @@ def from_file(
     tsv_path: str | Path, db_path: str | Path, id_col: str, text_column: str
 ):
     corpus = SCA()
-    corpus.read_tsv(
+    corpus.read_file(
         db_path=db_path,
         tsv_path=tsv_path,
         id_col=id_col,
@@ -67,7 +67,7 @@ def from_yml(yml_path):
 class SCA:
     db_path = Path("sca.sqlite3")
 
-    def read_tsv(
+    def read_file(
         self,
         tsv_path: Path | str,
         id_col: str,
@@ -401,46 +401,3 @@ class SCA:
 
                 else:
                     pass
-
-
-class Speech:
-    def __init__(self, speech_id, raw_text, collocates):
-        self.speech_id = speech_id
-        self.tokens = [
-            Token(self, raw_token) for raw_token in tokenizer(raw_text)
-        ]
-        self.collocates = collocates
-
-        self.collocate_tokens = []
-
-        self.patterns = set(
-            pattern
-            for collocate in self.collocates
-            for pattern in collocate[:2]
-        )
-
-
-class Token:
-    def __init__(self, speech, raw_token, pos):
-        self.speech = speech
-        self.token = cleaner(raw_token)
-
-        self.sw = self.Token in sw
-        self.pos = pos
-        self.sw_pos = pos
-
-        self.coll_patterns = [
-            pattern
-            for pattern in self.speech.patterns
-            if fnmatch(self.token, pattern)
-        ]
-
-        if len(self.coll_patterns) > 0:
-            self.speech.collocate_tokens.append(self)
-
-    def next_collocate(self):
-        pass
-
-
-if __name__ == "__main__":
-    pass
