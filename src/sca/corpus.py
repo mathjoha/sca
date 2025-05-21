@@ -450,7 +450,6 @@ class SCA:
             cleaned_pattern: The cleaned term string (no special characters) for
                              which to create a table.
         """
-        data = {"table": cleaned_pattern}
         if (cleaned_pattern,) not in self.conn.execute(
             "select tbl_name from sqlite_master"
         ).fetchall():
@@ -459,14 +458,16 @@ class SCA:
             )
             self.conn.execute(
                 f"create table {cleaned_pattern} (text_fk text unique)",
-                data,
             )
-            self.conn.execute(
-                f"""
-                insert into {cleaned_pattern} select {self.id_col} from
-                raw where {self.text_column} like "%" || :table || "%"
-                """,
-                data,
+            sqlite_utils.Database(self.conn).table(cleaned_pattern).upsert_all(
+                [
+                    {"text_fk": row[0]}
+                    for row in self.conn.execute(
+                        f"select {self.id_col} from raw where {self.text_column} like ?",
+                        [f"%{cleaned_pattern}%"],
+                    )
+                ],
+                pk="text_fk",
             )
             self.conn.commit()
             logger.info(
