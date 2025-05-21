@@ -65,5 +65,6 @@ markers = [
 dev = [
   "pytest",
   "pytest-cov",
-  "coverage-badge"
+  "coverage-badge",
+  "tox"
 ]
