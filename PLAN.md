@@ -6,9 +6,8 @@
 1. Run all tests to ensure no regressions
 2. Test edge cases:
    - Large datasets ✅
-   - Concurrent operations
+   - Concurrent operations ✅
    - Error recovery
-   - Data migration for existing databases
 
 Suggested prompt: "Let's run comprehensive tests on the uniqueness implementation"
 
