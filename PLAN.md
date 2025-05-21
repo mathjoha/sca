@@ -1,6 +1,6 @@
 2. Modify `tabulate_term` method:
    - Add unique constraint to term tables ✅
-   - Add error handling for duplicate entries
+   - Add error handling for duplicate entries ✅
 
 3. Modify `create_collocate_group` method:
    - Add unique constraints to `named_collocate` table ✅
