@@ -1,9 +1,0 @@
----
-description:
-globs:
-alwaysApply: true
----
-Write pythonic code:
-Names should be self-explanatory.
-Comments are rarely necessary.
-Docstrings are great.
