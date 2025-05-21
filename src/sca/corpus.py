@@ -158,6 +158,36 @@ class SCA:
             f"Added {len(custom_stopwords)} custom stopwords from {file_path}"
         )
 
+    def add_stopwords(self, stopwords: set):
+        """Add custom stopwords programmatically.
+
+        Args:
+            stopwords: A set of strings to add as stopwords.
+
+        Raises:
+            TypeError: If stopwords is not a set.
+        """
+        if not isinstance(stopwords, set):
+            raise TypeError("Stopwords must be provided as a set")
+
+        self.stopwords.update(stopwords)
+        logger.info(f"Added {len(stopwords)} custom stopwords")
+
+    def remove_stopwords(self, stopwords: set):
+        """Remove stopwords programmatically.
+
+        Args:
+            stopwords: A set of strings to remove from stopwords.
+
+        Raises:
+            TypeError: If stopwords is not a set.
+        """
+        if not isinstance(stopwords, set):
+            raise TypeError("Stopwords must be provided as a set")
+
+        self.stopwords.difference_update(stopwords)
+        logger.info(f"Removed {len(stopwords)} stopwords")
+
     def read_file(
         self,
         tsv_path: Path | str,

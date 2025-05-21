@@ -18,51 +18,22 @@
 ## 2. Add Custom Stopwords Support
 1. Add method to load stopwords from file ✅
     - Happy path test: Test loading stopwords from file ✅
-    ```python
-    def test_load_stopwords_from_file(tmp_path):
-        # Create test file
-        sw_file = tmp_path / "custom_stopwords.txt"
-        sw_file.write_text("custom1\ncustom2\ncustom3")
 
-        corpus = SCA()
-        corpus.load_stopwords_from_file(sw_file)
-        assert "custom1" in corpus.stopwords
-        assert "custom2" in corpus.stopwords
-    ```
     - Implement feature: ✅
         - Add load_stopwords_from_file method ✅
         - Support txt files with one word per line ✅
         - Add validation for file format ✅
     - Unhappy path test: Test invalid file formats and missing files ✅
-    ```python
-    def test_invalid_stopwords_file():
-        with pytest.raises(FileNotFoundError):
-            corpus = SCA()
-            corpus.load_stopwords_from_file("nonexistent.txt")
-    ```
 
-2. Add method to add/remove stopwords programmatically
-    - Happy path test: Test adding and removing stopwords
-    ```python
-    def test_modify_stopwords():
-        corpus = SCA()
-        corpus.add_stopwords({"new1", "new2"})
-        assert "new1" in corpus.stopwords
+2. Add method to add/remove stopwords programmatically ✅
+    - Happy path test: Test adding and removing stopwords ✅
 
-        corpus.remove_stopwords({"new1"})
-        assert "new1" not in corpus.stopwords
-    ```
-    - Implement feature:
-        - Add add_stopwords and remove_stopwords methods
-        - Add validation for input types
-        - Update stopwords set in place
-    - Unhappy path test: Test invalid inputs
-    ```python
-    def test_invalid_stopwords_modification():
-        corpus = SCA()
-        with pytest.raises(TypeError):
-            corpus.add_stopwords("not_a_set")
-    ```
+    - Implement feature: ✅
+        - Add add_stopwords and remove_stopwords methods ✅
+        - Add validation for input types ✅
+        - Update stopwords set in place ✅
+    - Unhappy path test: Test invalid inputs ✅
+
 
 ## 3. Add Stopwords Persistence
 1. Add stopwords to YAML configuration

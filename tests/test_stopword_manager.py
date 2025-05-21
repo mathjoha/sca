@@ -51,3 +51,23 @@ def test_invalid_stopwords_file():
     with pytest.raises(FileNotFoundError):
         corpus = SCA()
         corpus.load_stopwords_from_file("nonexistent.txt")
+
+
+def test_modify_stopwords():
+    corpus = SCA()
+    corpus.add_stopwords({"new1", "new2"})
+    assert "new1" in corpus.stopwords
+    assert "new2" in corpus.stopwords
+
+    corpus.remove_stopwords({"new1"})
+    assert "new1" not in corpus.stopwords
+    assert "new2" in corpus.stopwords
+
+
+def test_invalid_stopwords_modification():
+    corpus = SCA()
+    with pytest.raises(TypeError, match="Stopwords must be provided as a set"):
+        corpus.add_stopwords("not_a_set")
+
+    with pytest.raises(TypeError, match="Stopwords must be provided as a set"):
+        corpus.remove_stopwords("not_a_set")
