@@ -17,10 +17,6 @@ def create_minimal_tsv(
     return tsv_path
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="Red Phase: DB uniqueness for collocate_window not yet implemented",
-)
 def test_collocate_window_prevents_duplicates_at_db_level(tmp_path: Path):
     db_path = tmp_path / "test.sqlite3"
     tsv_path = create_minimal_tsv(
@@ -41,14 +37,14 @@ def test_collocate_window_prevents_duplicates_at_db_level(tmp_path: Path):
     cursor = conn.cursor()
 
     cursor.execute(
-        f"SELECT COUNT(*) FROM collocate_window WHERE {sca_instance.text_column}=? AND pattern1=? AND pattern2=?",
+        f"SELECT COUNT(*) FROM collocate_window WHERE {sca_instance.id_col}=? AND pattern1=? AND pattern2=?",
         ("text1", "patterna", "patternb"),
     )
     count = cursor.fetchone()[0]
     assert count == 1, "Initial data not inserted by mark_windows as expected"
 
     cursor.execute(
-        f"SELECT {sca_instance.text_column}, pattern1, pattern2, window FROM collocate_window WHERE {sca_instance.text_column}=? AND pattern1=? AND pattern2=?",
+        f"SELECT {sca_instance.id_col}, pattern1, pattern2, window FROM collocate_window WHERE {sca_instance.id_col}=? AND pattern1=? AND pattern2=?",
         ("text1", "patterna", "patternb"),
     )
     inserted_row_data = cursor.fetchone()
@@ -58,7 +54,7 @@ def test_collocate_window_prevents_duplicates_at_db_level(tmp_path: Path):
 
     with pytest.raises(sqlite3.IntegrityError):
         cursor.execute(
-            f"INSERT INTO collocate_window ({sca_instance.text_column}, pattern1, pattern2, window) VALUES (?, ?, ?, ?)",
+            f"INSERT INTO collocate_window ({sca_instance.id_col}, pattern1, pattern2, window) VALUES (?, ?, ?, ?)",
             inserted_row_data,
         )
         conn.commit()

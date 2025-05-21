@@ -16,7 +16,7 @@ Suggested prompt: "Let's start by implementing the uniqueness tests in test_uniq
 
 ### 2. Green Phase: Implement Uniqueness Constraints
 1. Modify `seed_db` method:
-   - Add unique constraints to `collocate_window` table
+   - Add unique constraints to `collocate_window` table ✅
    - Add error handling for duplicate entries
 
 2. Modify `tabulate_term` method:

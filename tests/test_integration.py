@@ -247,7 +247,7 @@ class TestSCAOperations:
         conn = sqlite3.connect(sca.db_path)
         cursor = conn.cursor()
         cursor.execute(
-            f"SELECT {sca.text_column} FROM collocate_window WHERE window IS NOT NULL"
+            f"SELECT {sca.id_col} FROM collocate_window WHERE window IS NOT NULL"
         )
         rows = cursor.fetchall()
         conn.close()
@@ -268,7 +268,7 @@ class TestSCAOperations:
         cursor = conn.cursor()
         cursor.execute(
             f"SELECT COUNT(*) FROM collocate_window "
-            f"WHERE {sca.text_column} = '1' AND pattern1 = 'hello' AND pattern2 = 'world' AND window IS NOT NULL"
+            f"WHERE {sca.id_col} = '1' AND pattern1 = 'hello' AND pattern2 = 'world' AND window IS NOT NULL"
         )
         count = cursor.fetchone()[0]
         conn.close()
@@ -571,7 +571,7 @@ class TestSCAOperations:
         conn = sqlite3.connect(sca.db_path)
         cursor = conn.cursor()
         cursor.execute(
-            f"SELECT {sca.text_column} FROM collocate_window WHERE pattern1='alpha' AND pattern2='beta' AND window IS NOT NULL"
+            f"SELECT {sca.id_col} FROM collocate_window WHERE pattern1='alpha' AND pattern2='beta' AND window IS NOT NULL"
         )
         rows_with_window = cursor.fetchall()
         conn.close()
@@ -607,7 +607,7 @@ class TestSCAOperations:
         cursor = conn.cursor()
         # The placeholder has pattern1='delta', pattern2='gamma' because they are sorted.
         cursor.execute(
-            f"SELECT {sca.text_column}, window FROM collocate_window WHERE pattern1='delta' AND pattern2='gamma'"
+            f"SELECT {sca.id_col}, window FROM collocate_window WHERE pattern1='delta' AND pattern2='gamma'"
         )
         rows = cursor.fetchall()
         conn.close()

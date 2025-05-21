@@ -400,11 +400,12 @@ class SCA:
 
         db["collocate_window"].create(
             {
-                self.text_column: str,
+                self.id_col: str,
                 "pattern1": str,
                 "pattern2": str,
                 "window": int,
-            }
+            },
+            pk=[self.id_col, "pattern1", "pattern2"],
         )
         logger.info("Created 'collocate_window' table.")
         logger.info(f"Finished seeding database from {source_path}")
@@ -562,7 +563,7 @@ class SCA:
         self.conn.executemany(
             f"""
             insert into collocate_window
-            ({self.text_column}, pattern1, pattern2, window)
+            ({self.id_col}, pattern1, pattern2, window)
             values (?, ?, ?, ?)""",
             data,
         )
@@ -668,7 +669,7 @@ class SCA:
         )
 
         id_query = (
-            f" (select distinct {self.text_column} from "
+            f" (select distinct {self.id_col} from "
             f"collocate_window where {conditions}) "
         )
 
