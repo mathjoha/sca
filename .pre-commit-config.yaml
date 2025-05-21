@@ -42,4 +42,4 @@ repos:
         pass_filenames: false
         always_run: true
         verbose: true
-        stages: [push, post-merge]
+        stages: [pre-push, post-merge]
