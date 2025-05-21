@@ -65,31 +65,59 @@ def test_header_sanitation_check(tmp_path):
         )
 
 
-@pytest.mark.xfail(
-    strict=True, reason="Red Phase: Test for duplicate headers after cleaning"
-)
-def test_duplicate_headers_after_cleaning(tmp_path):
+def test_duplicate_headers_detection(tmp_path):
     csv_path = tmp_path / "duplicate_headers.csv"
     db_path = tmp_path / "test_duplicate.sqlite3"
 
-    headers_original = ["Header One", "Header.One", "UniqueHeader"]
+    headers_original = [
+        "headerone",
+        "headeronE",
+        "uniqueheader",
+        "id_col",
+        "text_c",
+    ]
     data = [
         [f"data_{r}_{h}" for h in range(len(headers_original))]
         for r in range(2)
     ]
-    df = pd.DataFrame(data, columns=headers_original)
-    df["id_col"] = ["id_1", "id_2"]
-    df["text_c"] = ["text_1", "text_2"]
+    df = pd.DataFrame(data)
+    df.columns = headers_original
     df.to_csv(csv_path, index=False)
 
     corpus = SCA()
-    with pytest.raises(
-        ValueError, match="Duplicate column names found after cleaning:"
-    ):
+    with pytest.raises(ValueError, match="Duplicate column names found."):
         corpus.read_file(
             tsv_path=csv_path,
             id_col="id_col",
             text_column="text_c",
+            db_path=db_path,
+        )
+
+
+def test_duplicate_keys(tmp_path):
+    csv_path = tmp_path / "duplicate_headers.csv"
+    db_path = tmp_path / "test_duplicate.sqlite3"
+
+    headers_original = [
+        "id_col",
+        "id_col",
+    ]
+    data = [
+        [f"data_{r}_{h}" for h in range(len(headers_original))]
+        for r in range(2)
+    ]
+    df = pd.DataFrame(data)
+    df.columns = headers_original
+    df.to_csv(csv_path, index=False)
+
+    corpus = SCA()
+    with pytest.raises(
+        ValueError, match="text_column and id_col cannot be the same"
+    ):
+        corpus.read_file(
+            tsv_path=csv_path,
+            id_col="id_col",
+            text_column="id_col",
             db_path=db_path,
         )
 

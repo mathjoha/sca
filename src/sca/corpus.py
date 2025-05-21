@@ -150,6 +150,10 @@ class SCA:
         }
 
     def seed_db(self, source_path):
+
+        if self.text_column == self.id_col:
+            raise ValueError("text_column and id_col cannot be the same")
+
         db = sqlite_utils.Database(self.db_path)
 
         if source_path.suffix.lower() == ".tsv":
@@ -177,11 +181,16 @@ class SCA:
                     f"Column name {column_name} is not SQLite-friendly."
                 )
 
-        self.columns = set(data.columns) - {
+        self.columns = set(map(str.lower, data.columns)) - {
             self.id_col,
             self.text_column,
         }
-        assert len(self.columns) == len(data.columns) - 2
+
+        if len(self.columns) != (len(data.columns) - 2):
+            raise ValueError(
+                "Duplicate column names found." + ", ".join(self.columns)
+            )
+
         self.set_data_cols()
 
         db["raw"].insert_all(data.to_dict(orient="records"))
