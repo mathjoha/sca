@@ -1,15 +1,7 @@
-### 3. Blue Phase: Refactor and Optimize
-1. Extract common uniqueness constraint logic:
-   - Create helper method for adding unique constraints
-   - Create helper method for handling duplicate entries
-   - Update existing methods to use new helpers
-
 2. Update documentation:
-   - Add docstring information about uniqueness constraints
+   - Make sure that DocStrings still match.
    - Update error messages to be more descriptive
    - Add logging for uniqueness violations
-
-Suggested prompt: "Let's refactor the uniqueness constraint implementation to use helper methods"
 
 ### 4. Testing and Validation
 1. Run all tests to ensure no regressions
