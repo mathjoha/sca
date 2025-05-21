@@ -1,14 +1,3 @@
-2. Modify `tabulate_term` method:
-   - Add unique constraint to term tables ✅
-   - Add error handling for duplicate entries ✅
-
-3. Modify `create_collocate_group` method:
-   - Add unique constraints to `named_collocate` table ✅
-   - Add unique constraints to group tables ✅
-   - Use sqlite-utils upsert to avoid duplicates. ✅
-
-Suggested prompt: "Let's implement the uniqueness constraints in the seed_db method"
-
 ### 3. Blue Phase: Refactor and Optimize
 1. Extract common uniqueness constraint logic:
    - Create helper method for adding unique constraints
