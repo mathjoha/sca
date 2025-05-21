@@ -1,5 +1,5 @@
 2. Update documentation:
-   - Make sure that DocStrings still match.
+   - Make sure that DocStrings still match. ✅
    - Update error messages to be more descriptive
    - Add logging for uniqueness violations
 

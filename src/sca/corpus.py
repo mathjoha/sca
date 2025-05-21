@@ -786,10 +786,13 @@ class SCA:
 
         This method performs several actions:
         1. Creates (if not exists) a 'named_collocate' table to store metadata about
-           the collocate group (name, table_name, term1, term2, window).
+           the collocate group (name, table_name, term1, term2, window). This
+           table has a UNIQUE constraint on (name, term1, term2, window).
         2. Inserts the provided collocate specifications into 'named_collocate'.
         3. Creates a new table named 'group_<collocate_name>' (with spaces in
-           collocate_name replaced by underscores).
+           collocate_name replaced by underscores). This table has a UNIQUE
+           constraint on (text_fk, raw_text) to ensure each raw token from a
+           specific text is listed only once.
         4. Populates this new table with token-level information for all texts that
            match any of the specified collocates. For each token, it stores:
            - text_fk: Foreign key to the original text in the 'raw' table.
