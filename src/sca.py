@@ -137,12 +137,18 @@ class SCA:
     def seed_db(self, source_path):
         db = sqlite_utils.Database(self.db_path)
 
+        format = (
+            sqlite_utils.utils.Format.TSV
+            if source_path.suffix.lower() == ".tsv"
+            else None
+        )
+
         with open(source_path, "rb") as f:
             rows, _ = sqlite_utils.utils.rows_from_file(
                 f,
                 dialect=source_path.suffix,
                 encoding="utf8",
-                format=sqlite_utils.utils.Format.TSV,
+                format=format,
             )
 
             db["raw"].insert_all(rows)
