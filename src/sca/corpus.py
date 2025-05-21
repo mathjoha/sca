@@ -163,10 +163,15 @@ class SCA:
             raise AttributeError(
                 f"Column {self.text_column} not found in {source_path}"
             )
-        data.columns = [
+
+        cleaned_column_names_list = [
             col.strip().replace(" ", "_").lower() for col in data.columns
         ]
-        self.columns = set(data.columns) - {self.id_col, self.text_column}
+        self.columns = set(cleaned_column_names_list) - {
+            self.id_col,
+            self.text_column,
+        }
+        assert len(self.columns) == len(data.columns) - 2
         self.set_data_cols()
 
         db["raw"].insert_all(data.to_dict(orient="records"))
