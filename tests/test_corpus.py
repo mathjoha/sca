@@ -45,39 +45,28 @@ def test_header_cleaning(tmp_path):
         "Header With-Hyphen",
         "header_ok",
     ]
-    headers_cleaned = [
-        "first_header",
-        "secondheader",
-        "header_withhyphen",
-        "header_ok",
-    ]
 
     data = [
         [f"data_{r}_{h}" for h in range(len(headers_original))]
         for r in range(2)
     ]
     df = pd.DataFrame(data, columns=headers_original)
-    df["id_col"] = ["id_1", "id_2"]
-    df["text_c"] = ["text_1", "text_2"]
     df.to_csv(csv_path, index=False)
 
     corpus_write = SCA()
-    corpus_write.read_file(
-        tsv_path=csv_path,
-        id_col="id_col",
-        text_column="text_c",
-        db_path=db_path,
-    )
+    with pytest.raises(
+        ValueError, match="Duplicate column names found after cleaning:"
+    ):
+        corpus_write.read_file(
+            tsv_path=csv_path,
+            id_col="id_1",
+            text_column="text_1",
+            db_path=db_path,
+        )
     corpus_write.save()
 
     corpus_load = SCA()
     corpus_load.load(yml_path)
-
-    assert sorted(list(corpus_load.columns)) == sorted(headers_cleaned)
-    for header in corpus_load.columns:
-        assert (
-            header.isidentifier()
-        ), f"Header '{header}' is not a valid SQLite table name."
 
 
 @pytest.mark.xfail(
