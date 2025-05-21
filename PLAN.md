@@ -2,13 +2,7 @@
 
 ## 1. Add Language Support for NLTK Stopwords
 1. Add language parameter to SCA initialization
-    - Happy path test: Test initializing SCA with different languages (e.g., 'english', 'french', 'german')
-    ```python
-    def test_sca_language_initialization():
-        corpus = SCA(language='french')
-        assert 'le' in corpus.stopwords  # French stopword
-        assert 'the' not in corpus.stopwords  # English stopword
-    ```
+    - Happy path test: Test initializing SCA with different languages (e.g., 'english', 'french', 'german') ✅
     - Implement feature:
         - Move stopwords initialization to SCA class
         - Add language parameter to __init__
