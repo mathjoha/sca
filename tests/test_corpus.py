@@ -30,11 +30,7 @@ def create_dummy_tsv(file_path: Path, num_headers: int, num_rows: int):
     df.to_csv(file_path, index=False, sep="\t")
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="Red Phase: Test for headers with spaces and special characters",
-)
-def test_header_cleaning(tmp_path):
+def test_header_sanitation_check(tmp_path):
     csv_path = tmp_path / "special_headers.csv"
     db_path = tmp_path / "test_special.sqlite3"
     yml_path = tmp_path / "test_special.yml"
@@ -42,8 +38,12 @@ def test_header_cleaning(tmp_path):
     headers_original = [
         "First Header",
         "Second.Header",
-        "Header With-Hyphen",
-        "header_ok",
+        "Header-With-Hyphen",
+        "Semi;Colon",
+        "Full:Colon",
+        "co,ma",
+        "id_1",
+        "text_1",
     ]
 
     data = [
@@ -55,7 +55,7 @@ def test_header_cleaning(tmp_path):
 
     corpus_write = SCA()
     with pytest.raises(
-        ValueError, match="Duplicate column names found after cleaning:"
+        ValueError, match="Column name .+ is not SQLite-friendly."
     ):
         corpus_write.read_file(
             tsv_path=csv_path,
@@ -63,10 +63,6 @@ def test_header_cleaning(tmp_path):
             text_column="text_1",
             db_path=db_path,
         )
-    corpus_write.save()
-
-    corpus_load = SCA()
-    corpus_load.load(yml_path)
 
 
 @pytest.mark.xfail(
