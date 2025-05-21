@@ -264,7 +264,11 @@ class SCA:
         self.conn.commit()
 
     def collocate_to_condition(self, pattern1, pattern2, window):
-        return f' (pattern1 == "{pattern1}" and pattern2 == "{pattern2}" and window <= {window}) '
+        return f"""
+        (pattern1 == "{pattern1}"
+        and pattern2 == "{pattern2}"
+        and window <= {window})
+        """
 
     def add_collocates(self, collocates):
         prepared_collocates = set()
