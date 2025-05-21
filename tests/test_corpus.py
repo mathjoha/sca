@@ -4,7 +4,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from sca.corpus import SCA  # Assuming SCA is in sca.corpus
+from sca import SCA
 
 
 def create_dummy_csv(file_path: Path, num_headers: int, num_rows: int):
@@ -30,7 +30,7 @@ def create_dummy_tsv(file_path: Path, num_headers: int, num_rows: int):
     df.to_csv(file_path, index=False, sep="\t")
 
 
-def test_header_sanitation_check(tmp_path):
+def test_header_sanitation_check(tmp_path: Path):
     csv_path = tmp_path / "special_headers.csv"
     db_path = tmp_path / "test_special.sqlite3"
     yml_path = tmp_path / "test_special.yml"
@@ -65,7 +65,7 @@ def test_header_sanitation_check(tmp_path):
         )
 
 
-def test_duplicate_headers_detection(tmp_path):
+def test_duplicate_headers_detection(tmp_path: Path):
     csv_path = tmp_path / "duplicate_headers.csv"
     db_path = tmp_path / "test_duplicate.sqlite3"
 
@@ -94,7 +94,7 @@ def test_duplicate_headers_detection(tmp_path):
         )
 
 
-def test_duplicate_keys(tmp_path):
+def test_duplicate_keys(tmp_path: Path):
     csv_path = tmp_path / "duplicate_headers.csv"
     db_path = tmp_path / "test_duplicate.sqlite3"
 
@@ -122,7 +122,7 @@ def test_duplicate_keys(tmp_path):
         )
 
 
-def test_dynamic_csv_headers(tmp_path):
+def test_dynamic_csv_headers(tmp_path: Path):
     csv_path = tmp_path / "dynamic_headers.csv"
     db_path = tmp_path / "test_dynamic.sqlite3"
     yml_path = tmp_path / "test_dynamic.yml"
@@ -155,7 +155,7 @@ def test_dynamic_csv_headers(tmp_path):
         ), f"Header '{header}' is not a valid SQLite table name."
 
 
-def test_dynamic_tsv_headers(tmp_path):
+def test_dynamic_tsv_headers(tmp_path: Path):
     tsv_path = tmp_path / "dynamic_headers.tsv"
     db_path = tmp_path / "test_dynamic_tsv.sqlite3"
     yml_path = tmp_path / "test_dynamic_tsv.yml"
@@ -187,7 +187,7 @@ def test_dynamic_tsv_headers(tmp_path):
         ), f"Header '{header}' is not a valid SQLite table name."
 
 
-def test_file_only_id_text(tmp_path):
+def test_file_only_id_text(tmp_path: Path):
     csv_path = tmp_path / "only_id_text.csv"
     db_path = tmp_path / "test_only_id_text.sqlite3"
     yml_path = tmp_path / "test_only_id_text.yml"
