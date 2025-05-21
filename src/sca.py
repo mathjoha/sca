@@ -44,7 +44,7 @@ def get_min_window(pos1, pos2):
     return min(abs(p1 - p2) for p1 in pos1 for p2 in pos2)
 
 
-def from_tsv(
+def from_file(
     tsv_path: str | Path, db_path: str | Path, id_col: str, text_column: str
 ):
     corpus = SCA()

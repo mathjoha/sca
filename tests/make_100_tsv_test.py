@@ -23,7 +23,7 @@ def temp_dir():
 @pytest.fixture(scope="module")
 def sca_filled(temp_dir, tsv_file):
     db_path = temp_dir / "sca.sqlite3"
-    corpus = sca.from_tsv(
+    corpus = sca.from_file(
         db_path=db_path,
         tsv_path=tsv_file,
         id_col="speech_id",
