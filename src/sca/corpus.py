@@ -32,24 +32,72 @@ tokenizer_pattern = re.compile(r"\s+")
 
 
 def tokenizer(text):
+    """Tokenizes text by splitting on whitespace and converting to lowercase.
+
+    Args:
+        text: The input string to tokenize.
+
+    Returns:
+        A list of tokens.
+    """
     return tokenizer_pattern.split(text.lower())
 
 
 def cleaner(token):
+    """Removes non-alphabetic characters from a token.
+
+    Args:
+        token: The input token string.
+
+    Returns:
+        The cleaned token string.
+    """
     return cleaner_pattern.sub("", token)
 
 
 def get_min_window(pos1, pos2):
+    """Calculates the minimum distance between two lists of positions.
+
+    Args:
+        pos1: A list of integer positions.
+        pos2: A list of integer positions.
+
+    Returns:
+        The minimum absolute difference between any pair of positions
+        from pos1 and pos2.
+    """
     return min(abs(p1 - p2) for p1 in pos1 for p2 in pos2)
 
 
 def sqlite3_friendly(column_name):
+    """Checks if a column name is SQLite-friendly.
+
+    A column name is considered SQLite-friendly if it contains only
+    alphanumeric characters and underscores.
+
+    Args:
+        column_name: The column name string to check.
+
+    Returns:
+        True if the column name is SQLite-friendly, False otherwise.
+    """
     return not re.search(r"[^a-zA-Z0-9_]", column_name)
 
 
 def from_file(
     tsv_path: str | Path, db_path: str | Path, id_col: str, text_column: str
 ):
+    """Creates an SCA object from a TSV/CSV file and a database path.
+
+    Args:
+        tsv_path: Path to the input TSV or CSV file.
+        db_path: Path to the SQLite database file.
+        id_col: Name of the column containing unique identifiers.
+        text_column: Name of the column containing the text data.
+
+    Returns:
+        An SCA object.
+    """
     corpus = SCA()
     corpus.read_file(
         db_path=db_path,
@@ -62,6 +110,14 @@ def from_file(
 
 
 def from_yml(yml_path):
+    """Creates an SCA object from a YAML configuration file.
+
+    Args:
+        yml_path: Path to the YAML configuration file.
+
+    Returns:
+        An SCA object.
+    """
     corpus = SCA()
     corpus.load(yml_path)
     return corpus
@@ -77,6 +133,17 @@ class SCA:
         text_column: str,
         db_path="sca.sqlite3",
     ):
+        """Reads data from a TSV/CSV file and initializes the SCA object.
+
+        If the database file specified by db_path does not exist, it seeds the
+        database from the tsv_path.
+
+        Args:
+            tsv_path: Path to the input TSV or CSV file.
+            id_col: Name of the column containing unique identifiers.
+            text_column: Name of the column containing the text data.
+            db_path: Path to the SQLite database file.
+        """
         self.db_path = Path(db_path)
 
         self.yaml_path = self.db_path.with_suffix(".yml")
@@ -106,6 +173,11 @@ class SCA:
         atexit.register(self.save)
 
     def settings_dict(self):
+        """Returns a dictionary of the current SCA settings.
+
+        Returns:
+            A dictionary containing settings like database path and collocates.
+        """
         settings = {
             "db_path": str(
                 self.db_path.resolve().relative_to(
@@ -118,6 +190,11 @@ class SCA:
         return settings
 
     def save(self):
+        """Saves the current SCA settings to a YAML file.
+
+        The YAML file is saved with the same name as the database file but
+        with a .yml extension.
+        """
         settings = self.settings_dict()
         settings["collocates"] = list(settings["collocates"])
         settings["id_col"] = self.id_col
@@ -127,6 +204,11 @@ class SCA:
             safe_dump(data=settings, stream=f)
 
     def load(self, settings_path: str | Path):
+        """Loads SCA settings from a YAML configuration file.
+
+        Args:
+            settings_path: Path to the YAML configuration file.
+        """
         self.yaml_path = Path(settings_path)
         with open(settings_path, "r", encoding="utf8") as f:
             settings = safe_load(f)
@@ -153,6 +235,10 @@ class SCA:
         )
 
     def set_data_cols(self):
+        """Sets the data_cols attribute as a comma-separated string of columns.
+
+        This is used for constructing SQL queries.
+        """
         self.data_cols = ", ".join(self.columns)
 
     def __hash__(self):
@@ -173,12 +259,33 @@ class SCA:
         )
 
     def _add_term(self, term):
+        """Adds a term to the database and updates the internal terms set.
+
+        This involves tabulating the term occurrences in the raw text data.
+
+        Args:
+            term: The term string to add.
+        """
         self.tabulate_term(term)
         self.terms |= {
             term,
         }
 
     def seed_db(self, source_path):
+        """Seeds the SQLite database from a source CSV or TSV file.
+
+        This method reads the source file, validates column names, creates
+        necessary tables and indexes in the database.
+
+        Args:
+            source_path: Path to the source CSV or TSV file.
+
+        Raises:
+            ValueError: If text_column and id_col are the same, if the input
+                file is empty, if column names are not SQLite-friendly, or if
+                duplicate column names are found.
+            AttributeError: If id_col or text_column are not found in the input file.
+        """
 
         if self.text_column == self.id_col:
             raise ValueError("text_column and id_col cannot be the same")
@@ -239,6 +346,21 @@ class SCA:
         )
 
     def get_positions(self, tokens, count_stopwords=False, *patterns):
+        """Finds all occurrences of patterns in a list of tokens.
+
+        Args:
+            tokens: A list of token strings.
+            count_stopwords: If True, stopwords are included in position counts.
+                             If False (default), stopwords are ignored and do not
+                             affect position numbering.
+            *patterns: Variable length argument list of pattern strings to search for.
+                       Patterns can include wildcards (e.g., "*ing").
+
+        Returns:
+            A dictionary where keys are the input patterns and values are lists
+            of integer positions where each pattern was found. Positions are
+            0-indexed.
+        """
         pos_dict = {_: [] for _ in patterns}
         stops = 0
         for i, token in enumerate(tokens):
@@ -253,6 +375,16 @@ class SCA:
         return pos_dict
 
     def tabulate_term(self, cleaned_pattern):
+        """Creates a table in the database for a given term (cleaned_pattern).
+
+        The table stores the foreign keys (text_fk) of texts from the 'raw' table
+        that contain the term.
+        If the table already exists, this method does nothing.
+
+        Args:
+            cleaned_pattern: The cleaned term string (no special characters) for
+                             which to create a table.
+        """
         data = {"table": cleaned_pattern}
         if (cleaned_pattern,) not in self.conn.execute(
             "select tbl_name from sqlite_master"
@@ -273,6 +405,19 @@ class SCA:
             print(cleaned_pattern, "not calculated")
 
     def mark_windows(self, pattern1, pattern2, count_stopwords=False):
+        """Calculates and stores the minimum window between two patterns in texts.
+
+        This method identifies texts containing both pattern1 and pattern2,
+        calculates the minimum distance (window) between their occurrences in each
+        such text, and stores this information in the 'collocate_window' table.
+
+        Args:
+            pattern1: The first pattern string.
+            pattern2: The second pattern string.
+            count_stopwords: If True, stopwords are included in position counts
+                             when calculating windows. If False (default), stopwords
+                             are ignored.
+        """
         pattern1, pattern2 = sorted((pattern1, pattern2))
 
         clean1 = cleaner(pattern1)
@@ -337,6 +482,16 @@ class SCA:
         self.conn.commit()
 
     def collocate_to_condition(self, pattern1, pattern2, window):
+        """Generates an SQL condition string for a collocate pair and window size.
+
+        Args:
+            pattern1: The first pattern string of the collocate pair.
+            pattern2: The second pattern string of the collocate pair.
+            window: The maximum window size (distance) between the patterns.
+
+        Returns:
+            An SQL WHERE clause condition string.
+        """
         return f"""
         (pattern1 == "{pattern1}"
         and pattern2 == "{pattern2}"
@@ -344,6 +499,16 @@ class SCA:
         """
 
     def add_collocates(self, collocates):
+        """Adds new collocate pairs to the SCA object.
+
+        This involves cleaning the input patterns, adding any new terms to the
+        database, marking windows for new collocate pairs, and updating the
+        internal set of collocates.
+
+        Args:
+            collocates: An iterable of collocate pairs (tuples of two pattern
+                        strings). e.g. [("patternA", "patternB"), ...]
+        """
         prepared_collocates = set()
         clean_terms = set()
         for collocate in collocates:
@@ -373,6 +538,16 @@ class SCA:
         self.collocates |= prepared_collocates
 
     def collocate_to_speech_query(self, collocates):
+        """Generates an SQL subquery to select distinct text IDs based on collocates.
+
+        Args:
+            collocates: An iterable of collocate specifications, where each
+                        specification is a tuple (pattern1, pattern2, window).
+
+        Returns:
+            An SQL subquery string that selects distinct text IDs (speech_ids)
+            matching the given collocate conditions.
+        """
         conditions = " or ".join(
             self.collocate_to_condition(p1, p2, w) for p1, p2, w in collocates
         )
@@ -385,6 +560,16 @@ class SCA:
         return id_query
 
     def count_with_collocates(self, collocates):
+        """Counts occurrences in the raw data grouped by data columns, filtered by collocates.
+
+        Args:
+            collocates: An iterable of collocate specifications (pattern1, pattern2, window)
+                        used to filter the texts before counting.
+
+        Returns:
+            A database cursor pointing to the results of the count query.
+            The query groups by all columns specified in `self.data_cols`.
+        """
         id_query = self.collocate_to_speech_query(collocates)
 
         c = self.conn.execute(
@@ -398,6 +583,18 @@ class SCA:
         return c
 
     def counts_by_subgroups(self, collocates, out_file):
+        """Calculates and saves counts by subgroups, comparing baseline and collocate-filtered data.
+
+        This method first calculates baseline counts from the 'raw' table, grouped
+        by specified data columns. It then calculates counts for texts filtered by
+        the given collocates, grouped similarly. Finally, it merges these counts
+        and saves the result to a TSV file.
+
+        Args:
+            collocates: An iterable of collocate specifications (pattern1, pattern2, window)
+                        used for filtering.
+            out_file: Path to the output TSV file where results will be saved.
+        """
         # todo: test pre-calculating the baseline
         df_baseline = pd.read_sql_query(
             f"""
@@ -442,6 +639,30 @@ class SCA:
     ## headers = [d[0] for d in cursor.description]
 
     def create_collocate_group(self, collocate_name, collocates):
+        """Creates a named group of collocates and stores detailed token information.
+
+        This method performs several actions:
+        1. Creates (if not exists) a 'named_collocate' table to store metadata about
+           the collocate group (name, table_name, term1, term2, window).
+        2. Inserts the provided collocate specifications into 'named_collocate'.
+        3. Creates a new table named 'group_<collocate_name>' (with spaces in
+           collocate_name replaced by underscores).
+        4. Populates this new table with token-level information for all texts that
+           match any of the specified collocates. For each token, it stores:
+           - text_fk: Foreign key to the original text in the 'raw' table.
+           - raw_text: The original token string.
+           - token: The cleaned token string.
+           - sw: Boolean indicating if the token is a stopword.
+           - conterm: (Currently seems to be set to None or False, purpose might be
+                      related to "context term" - needs clarification).
+           - collocate_begin: (Currently seems to be set to None, purpose unclear).
+           - collocate_end: (Currently seems to be set to None, purpose unclear).
+
+        Args:
+            collocate_name: A string name for the collocate group.
+            collocates: An iterable of collocate specifications, where each
+                        specification is a tuple (pattern1, pattern2, window).
+        """
         table_name = "group_" + collocate_name.strip().replace(" ", "_")
 
         self.conn.execute(
