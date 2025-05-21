@@ -110,7 +110,7 @@ class TestFileAndConfigLoading:
         if db_path.exists():  # Ensure seed_db is called
             db_path.unlink()
 
-        expected_error_msg = "Column id_col_not_present not found"
+        expected_error_msg = r"The specified 'id_col' \('id_col_not_present'\) was not found in the columns of the input file '.*missing_id\.tsv'\. Available columns are: \['some_other_id_col', 'text'\]\. Please ensure the column name is correct and present in the file\."
 
         # Act & Assert
         with pytest.raises(AttributeError, match=expected_error_msg):
@@ -133,7 +133,7 @@ class TestFileAndConfigLoading:
         if db_path.exists():  # Ensure seed_db is called
             db_path.unlink()
 
-        expected_error_msg = "Column text_col_not_present not found"
+        expected_error_msg = r"The specified 'text_column' \('text_col_not_present'\) was not found in the columns of the input file '.*missing_text\.tsv'\. Available columns are: \['id', 'some_other_text_col'\]\. Please ensure the column name is correct and present in the file\."
 
         # Act & Assert
         with pytest.raises(AttributeError, match=expected_error_msg):
@@ -183,7 +183,8 @@ class TestFileAndConfigLoading:
         # Subsequent create_index call fails.
         # Updated: Now expecting ValueError due to changes in seed_db for empty files.
         with pytest.raises(
-            ValueError, match=f"Input file {headers_only_tsv_path} is empty."
+            ValueError,
+            match=rf"The input file '{headers_only_tsv_path}' is empty and does not contain any data\. Please provide a file with content\.",
         ):
             sca.read_file(
                 tsv_path=headers_only_tsv_path,
@@ -247,7 +248,7 @@ class TestSCAOperations:
         conn = sqlite3.connect(sca.db_path)
         cursor = conn.cursor()
         cursor.execute(
-            f"SELECT {sca.text_column} FROM collocate_window WHERE window IS NOT NULL"
+            f"SELECT {sca.id_col} FROM collocate_window WHERE window IS NOT NULL"
         )
         rows = cursor.fetchall()
         conn.close()
@@ -268,7 +269,7 @@ class TestSCAOperations:
         cursor = conn.cursor()
         cursor.execute(
             f"SELECT COUNT(*) FROM collocate_window "
-            f"WHERE {sca.text_column} = '1' AND pattern1 = 'hello' AND pattern2 = 'world' AND window IS NOT NULL"
+            f"WHERE {sca.id_col} = '1' AND pattern1 = 'hello' AND pattern2 = 'world' AND window IS NOT NULL"
         )
         count = cursor.fetchone()[0]
         conn.close()
@@ -571,7 +572,7 @@ class TestSCAOperations:
         conn = sqlite3.connect(sca.db_path)
         cursor = conn.cursor()
         cursor.execute(
-            f"SELECT {sca.text_column} FROM collocate_window WHERE pattern1='alpha' AND pattern2='beta' AND window IS NOT NULL"
+            f"SELECT {sca.id_col} FROM collocate_window WHERE pattern1='alpha' AND pattern2='beta' AND window IS NOT NULL"
         )
         rows_with_window = cursor.fetchall()
         conn.close()
@@ -607,7 +608,7 @@ class TestSCAOperations:
         cursor = conn.cursor()
         # The placeholder has pattern1='delta', pattern2='gamma' because they are sorted.
         cursor.execute(
-            f"SELECT {sca.text_column}, window FROM collocate_window WHERE pattern1='delta' AND pattern2='gamma'"
+            f"SELECT {sca.id_col}, window FROM collocate_window WHERE pattern1='delta' AND pattern2='gamma'"
         )
         rows = cursor.fetchall()
         conn.close()

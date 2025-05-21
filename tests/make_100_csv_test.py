@@ -99,7 +99,10 @@ def test_collocate_lenw10(
 
 
 def test_set_name_id_col(db_path: Path, csv_file: Path):
-    with pytest.raises(AttributeError, match="Column id_col_name not found"):
+    with pytest.raises(
+        AttributeError,
+        match=r"The specified 'id_col' \('id_col_name'\) was not found in the columns of the input file '.+'\. Available columns are: \['.+'\]\. Please ensure the column name is correct and present in the file\.",
+    ):
         sca.from_file(
             db_path=db_path.parent / "not_sca.sqlite3",
             tsv_path=csv_file,
@@ -110,7 +113,8 @@ def test_set_name_id_col(db_path: Path, csv_file: Path):
 
 def test_set_name_text_column(db_path, csv_file: Path):
     with pytest.raises(
-        AttributeError, match="Column speech_text_name not found"
+        AttributeError,
+        match=r"The specified 'text_column' \('speech_text_name'\) was not found in the columns of the input file '.+'\. Available columns are: \['.+'\]\. Please ensure the column name is correct and present in the file\.",
     ):
         sca.from_file(
             db_path=db_path.parent / "speech_sca.sqlite3",

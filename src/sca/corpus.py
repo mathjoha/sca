@@ -173,7 +173,7 @@ class SCA:
                 f"Database file {self.db_path} already exists. Skipping seed."
             )
             raise FileExistsError(
-                f"Trying to seed to an existing database file: {self.db_path}"
+                f"Database file '{self.db_path}' already exists. Seeding is only allowed to a non-existent database. If you intend to re-seed, please provide a new database path or delete the existing file '{self.db_path}'."
             )
 
         self.conn = sqlite3.connect(db_path)
@@ -278,7 +278,7 @@ class SCA:
         logger.info(f"Loaded {len(self.terms)} terms from the database.")
 
     def set_data_cols(self):
-        """Sets the data_cols attribute as a comma-separated string of columns.
+        """Sets the data columns for the SCA object.
 
         This is used for constructing SQL queries.
         """
@@ -329,12 +329,15 @@ class SCA:
                 file is empty, if column names are not SQLite-friendly, or if
                 duplicate column names are found.
             AttributeError: If id_col or text_column are not found in the input file.
+            TypeError: If the input file is not a valid TSV or CSV file.
         """
 
         logger.info(f"Starting to seed database from {source_path}")
         if self.text_column == self.id_col:
             logger.error("text_column and id_col cannot be the same.")
-            raise ValueError("text_column and id_col cannot be the same")
+            raise ValueError(
+                f"The 'id_col' ('{self.id_col}') and 'text_column' ('{self.text_column}') parameters cannot specify the same column name. Please provide distinct column names for identifiers and text content."
+            )
 
         db = sqlite_utils.Database(self.db_path)
         logger.info(f"Initialized database object for {self.db_path}")
@@ -351,19 +354,21 @@ class SCA:
 
         if data.empty:
             logger.error(f"Input file {source_path} is empty.")
-            raise ValueError(f"Input file {source_path} is empty.")
+            raise ValueError(
+                f"The input file '{source_path}' is empty and does not contain any data. Please provide a file with content."
+            )
 
         if self.id_col not in data.columns:
             logger.error(f"Column {self.id_col} not found in {source_path}")
             raise AttributeError(
-                f"Column {self.id_col} not found in {source_path}",
+                f"The specified 'id_col' ('{self.id_col}') was not found in the columns of the input file '{source_path}'. Available columns are: {list(data.columns)}. Please ensure the column name is correct and present in the file."
             )
         if self.text_column not in data.columns:
             logger.error(
                 f"Column {self.text_column} not found in {source_path}"
             )
             raise AttributeError(
-                f"Column {self.text_column} not found in {source_path}"
+                f"The specified 'text_column' ('{self.text_column}') was not found in the columns of the input file '{source_path}'. Available columns are: {list(data.columns)}. Please ensure the column name is correct and present in the file."
             )
 
         for column_name in data.columns:
@@ -386,9 +391,7 @@ class SCA:
 
         if len(self.columns) != (len(data.columns) - 2):
             logger.error(f"Duplicate column names found: {self.columns}")
-            raise ValueError(
-                "Duplicate column names found." + ", ".join(self.columns)
-            )
+            raise ValueError("Duplicate column names found.")
 
         self.set_data_cols()
 
@@ -400,11 +403,12 @@ class SCA:
 
         db["collocate_window"].create(
             {
-                self.text_column: str,
+                self.id_col: str,
                 "pattern1": str,
                 "pattern2": str,
                 "window": int,
-            }
+            },
+            pk=[self.id_col, "pattern1", "pattern2"],
         )
         logger.info("Created 'collocate_window' table.")
         logger.info(f"Finished seeding database from {source_path}")
@@ -449,7 +453,6 @@ class SCA:
             cleaned_pattern: The cleaned term string (no special characters) for
                              which to create a table.
         """
-        data = {"table": cleaned_pattern}
         if (cleaned_pattern,) not in self.conn.execute(
             "select tbl_name from sqlite_master"
         ).fetchall():
@@ -457,15 +460,17 @@ class SCA:
                 f"Table for term '{cleaned_pattern}' does not exist. Creating and populating."
             )
             self.conn.execute(
-                f"create table {cleaned_pattern} (text_fk)",
-                data,
+                f"create table {cleaned_pattern} (text_fk text unique)",
             )
-            self.conn.execute(
-                f"""
-                insert into {cleaned_pattern} select {self.id_col} from
-                raw where {self.text_column} like "%" || :table || "%"
-                """,
-                data,
+            sqlite_utils.Database(self.conn).table(cleaned_pattern).upsert_all(
+                [
+                    {"text_fk": row[0]}
+                    for row in self.conn.execute(
+                        f"select {self.id_col} from raw where {self.text_column} like ?",
+                        [f"%{cleaned_pattern}%"],
+                    )
+                ],
+                pk="text_fk",
             )
             self.conn.commit()
             logger.info(
@@ -552,21 +557,27 @@ class SCA:
             # For tracking that no collocates were found
             data.append((None, pattern1, pattern2, None))
             logger.info(
-                f"No occurrences found for '{pattern1}' - '{pattern2}'. Storing placeholder."
+                f"No occurrences found for '{pattern1}' - '{pattern2}'. "
+                "Storing placeholder."
             )
         else:
             logger.info(
                 f"Found {len(data)} instances for '{pattern1}' - '{pattern2}'."
             )
 
-        self.conn.executemany(
-            f"""
-            insert into collocate_window
-            ({self.text_column}, pattern1, pattern2, window)
-            values (?, ?, ?, ?)""",
-            data,
+        db = sqlite_utils.Database(self.db_path)
+        db["collocate_window"].upsert_all(
+            [
+                {
+                    self.id_col: speech_id,
+                    "pattern1": pattern1,
+                    "pattern2": pattern2,
+                    "window": window,
+                }
+                for speech_id, pattern1, pattern2, window in data
+            ],
+            pk=[self.id_col, "pattern1", "pattern2"],
         )
-        self.conn.commit()
         logger.info(
             f"Stored window information for '{pattern1}' - '{pattern2}' in 'collocate_window' table."
         )
@@ -668,7 +679,7 @@ class SCA:
         )
 
         id_query = (
-            f" (select distinct {self.text_column} from "
+            f" (select distinct {self.id_col} from "
             f"collocate_window where {conditions}) "
         )
 
@@ -778,10 +789,13 @@ class SCA:
 
         This method performs several actions:
         1. Creates (if not exists) a 'named_collocate' table to store metadata about
-           the collocate group (name, table_name, term1, term2, window).
+           the collocate group (name, table_name, term1, term2, window). This
+           table has a UNIQUE constraint on (name, term1, term2, window).
         2. Inserts the provided collocate specifications into 'named_collocate'.
         3. Creates a new table named 'group_<collocate_name>' (with spaces in
-           collocate_name replaced by underscores).
+           collocate_name replaced by underscores). This table has a UNIQUE
+           constraint on (text_fk, raw_text) to ensure each raw token from a
+           specific text is listed only once.
         4. Populates this new table with token-level information for all texts that
            match any of the specified collocates. For each token, it stores:
            - text_fk: Foreign key to the original text in the 'raw' table.
@@ -799,6 +813,19 @@ class SCA:
                         specification is a tuple (pattern1, pattern2, window).
         """
         table_name = "group_" + collocate_name.strip().replace(" ", "_")
+        if (
+            self.conn.execute(
+                "select name from sqlite_master where type =='table' and name == :table_name",
+                {"table_name": table_name},
+            ).fetchone()
+            is not None
+        ):
+            logger.debug(
+                f"Collocate group for '{collocate_name}'. "
+                f"Table name: '{table_name}', exists.\nExiting."
+            )
+            return None
+
         logger.info(
             f"Creating collocate group: '{collocate_name}'. Table name: '{table_name}'."
         )
@@ -812,26 +839,36 @@ class SCA:
             table_name text,
             term1 text,
             term2 text,
-            window integer)"""
+            window integer,
+            UNIQUE(name, term1, term2, window))"""
         )
         logger.info("Ensured 'named_collocate' table exists.")
 
-        self.conn.executemany(
-            f"""
-            insert into named_collocate (name, table_name, term1,
-              term2, window)
-            values ("{collocate_name}", "{table_name}", ?, ?, ?)
-            """,
-            collocates,
+        db = sqlite_utils.Database(self.conn)
+        named_collocate_records = [
+            {
+                "name": collocate_name,
+                "table_name": table_name,
+                "term1": c[0],
+                "term2": c[1],
+                "window": c[2],
+            }
+            for c in collocates
+        ]
+        db["named_collocate"].upsert_all(
+            named_collocate_records,
+            pk=("name", "term1", "term2", "window"),
+            alter=True,
         )
         logger.info(
-            f"Inserted {len(collocates)} specifications into 'named_collocate' for group '{collocate_name}'."
+            f"Upserted {len(collocates)} specifications into 'named_collocate' for group '{collocate_name}'."
         )
 
         self.conn.execute(
             f"""
             create table {table_name} (text_fk, raw_text, token,
-            sw, conterm, collocate_begin, collocate_end)
+            sw, conterm, collocate_begin, collocate_end,
+            UNIQUE(text_fk, raw_text))
             """
         )
         logger.info(

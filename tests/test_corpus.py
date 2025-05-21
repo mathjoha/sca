@@ -54,7 +54,8 @@ def test_header_sanitation_check(tmp_path: Path):
 
     corpus_write = SCA()
     with pytest.raises(
-        ValueError, match="Column name .+ is not SQLite-friendly."
+        ValueError,
+        match=r"Column name .+ is not SQLite-friendly\.",
     ):
         corpus_write.read_file(
             tsv_path=csv_path,
@@ -84,7 +85,10 @@ def test_duplicate_headers_detection(tmp_path: Path):
     df.to_csv(csv_path, index=False)
 
     corpus = SCA()
-    with pytest.raises(ValueError, match="Duplicate column names found."):
+    with pytest.raises(
+        ValueError,
+        match=r"Duplicate column names found\.",
+    ):
         corpus.read_file(
             tsv_path=csv_path,
             id_col="id_col",
@@ -111,7 +115,8 @@ def test_duplicate_keys(tmp_path: Path):
 
     corpus = SCA()
     with pytest.raises(
-        ValueError, match="text_column and id_col cannot be the same"
+        ValueError,
+        match=r"The 'id_col' .+ and 'text_column' .+ parameters cannot specify the same column name\. Please provide distinct column names for identifiers and text content\.",
     ):
         corpus.read_file(
             tsv_path=csv_path,
@@ -142,11 +147,10 @@ def test_dynamic_csv_headers(tmp_path: Path):
     corpus_load = SCA()
     corpus_load.load(yml_path)
 
-    expected_headers = sorted([f"header{i}" for i in range(5)])
-    assert (
-        hasattr(corpus_load, "columns")
-        and sorted(list(corpus_load.columns)) == expected_headers
-    ), f"Expected {expected_headers}, got {getattr(corpus_load, 'columns', 'attribute missing')}"
+    expected = [f"header{i}" for i in range(5)]
+    assert corpus_load.columns == [
+        f"header{i}" for i in range(5)
+    ], f"Expected {expected}, got {getattr(corpus_load, 'columns', 'attribute missing')}"
 
     for header in corpus_load.columns:
         assert (
@@ -175,11 +179,10 @@ def test_dynamic_tsv_headers(tmp_path: Path):
     corpus_load = SCA()
     corpus_load.load(yml_path)
 
-    expected_headers = sorted([f"header_tsv_{i}" for i in range(3)])
+    expected_headers = [f"header_tsv_{i}" for i in range(3)]
     assert (
-        hasattr(corpus_load, "columns")
-        and sorted(list(corpus_load.columns)) == expected_headers
-    ), f"Expected {expected_headers}, got {getattr(corpus_load, 'columns', 'attribute missing')}"
+        expected_headers == corpus_load.columns
+    ), f"Expected {expected_headers}, got {corpus_load.columns}"
     for header in corpus_load.columns:
         assert (
             header.isidentifier()
@@ -208,8 +211,8 @@ def test_file_only_id_text(tmp_path: Path):
     corpus_load.load(yml_path)
 
     assert (
-        hasattr(corpus_load, "columns") and list(corpus_load.columns) == []
-    ), f"Expected empty list for columns, got {getattr(corpus_load, 'columns', 'attribute missing')}"
+        corpus_load.columns == []
+    ), f"Expected {sorted(['id', 'text'])}, got {getattr(corpus_load, 'columns', 'attribute missing')}"
 
 
 def test_loading(tmp_path: Path):
@@ -235,6 +238,19 @@ def test_loading(tmp_path: Path):
     assert corpus_write != None
 
     assert corpus_write == corpus_load
+
+    db_path.touch()
+
+    with pytest.raises(
+        FileExistsError,
+        match=rf"Database file '{db_path}' already exists\. Seeding is only allowed to a non-existent database\. If you intend to re-seed, please provide a new database path or delete the existing file '{db_path}'\.",
+    ):
+        from_file(
+            tsv_path=db_path,
+            id_col="id",
+            text_column="text",
+            db_path=db_path,
+        )
 
 
 def test_compare_same(tmp_path: Path):
@@ -294,10 +310,30 @@ def test_seed_existing_db(tmp_path: Path):
     db_path.touch()
 
     with pytest.raises(
-        FileExistsError, match="Trying to seed to an existing database file:"
+        FileExistsError,
+        match=r"Database file '.*small_csv\.sqlite3' already exists\. Seeding is only allowed to a non-existent database\. If you intend to re-seed, please provide a new database path or delete the existing file '.*small_csv\.sqlite3'\.",
     ):
         from_file(
             tsv_path=db_path,
+            id_col="id",
+            text_column="text",
+            db_path=db_path,
+        )
+
+
+def test_seed_db_with_tsv_headers_only_raises_db_error(tmp_path: Path):
+    headers_only_tsv_path = tmp_path / "headers_only.tsv"
+    db_path = tmp_path / "test_headers_only.sqlite3"
+
+    with open(headers_only_tsv_path, "w") as f:
+        f.write("id\ttext\n")
+
+    with pytest.raises(
+        ValueError,
+        match=rf"The input file '{headers_only_tsv_path}' is empty and does not contain any data\. Please provide a file with content\.",
+    ):
+        from_file(
+            tsv_path=headers_only_tsv_path,
             id_col="id",
             text_column="text",
             db_path=db_path,
