@@ -1,5 +1,4 @@
 from pathlib import Path
-from tempfile import mkdtemp
 
 import pytest
 from yaml import safe_load
