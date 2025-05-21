@@ -158,36 +158,6 @@ class SCA:
             f"Added {len(custom_stopwords)} custom stopwords from {file_path}"
         )
 
-    def add_stopwords(self, stopwords: set):
-        """Add custom stopwords programmatically.
-
-        Args:
-            stopwords: A set of strings to add as stopwords.
-
-        Raises:
-            TypeError: If stopwords is not a set.
-        """
-        if not isinstance(stopwords, set):
-            raise TypeError("Stopwords must be provided as a set")
-
-        self.stopwords.update(stopwords)
-        logger.info(f"Added {len(stopwords)} custom stopwords")
-
-    def remove_stopwords(self, stopwords: set):
-        """Remove stopwords programmatically.
-
-        Args:
-            stopwords: A set of strings to remove from stopwords.
-
-        Raises:
-            TypeError: If stopwords is not a set.
-        """
-        if not isinstance(stopwords, set):
-            raise TypeError("Stopwords must be provided as a set")
-
-        self.stopwords.difference_update(stopwords)
-        logger.info(f"Removed {len(stopwords)} stopwords")
-
     def read_file(
         self,
         tsv_path: Path | str,
@@ -258,8 +228,11 @@ class SCA:
         """Returns a dictionary of the current SCA settings.
 
         Returns:
-            A dictionary containing settings like database path and collocates.
+            A dictionary containing settings like database path, collocates, and stopwords configuration.
         """
+        if not hasattr(self, "collocates"):
+            self.collocates = set()
+
         settings = {
             "db_path": str(
                 self.db_path.resolve().relative_to(
@@ -268,6 +241,9 @@ class SCA:
             ),
             "collocates": self.collocates,
             "language": self.language,
+            "custom_stopwords": list(
+                self.stopwords - set(stopwords.words(self.language))
+            ),
         }
         return settings
 
@@ -276,7 +252,13 @@ class SCA:
 
         The YAML file is saved with the same name as the database file but
         with a .yml extension.
+
+        Raises:
+            ValueError: If the language configuration is invalid
         """
+        if not self.language or self.language not in stopwords.fileids():
+            raise ValueError("Invalid language configuration")
+
         logger.info(f"Saving SCA settings to {self.yaml_path}")
         settings = self.settings_dict()
         settings["collocates"] = list(settings["collocates"])
@@ -302,19 +284,14 @@ class SCA:
         self.language = settings["language"]
         if not self.language in stopwords.fileids():
             raise ValueError(f"Invalid language code '{self.language}'")
+
+        # Initialize base stopwords from language
         self.stopwords = set(stopwords.words(self.language))
-        self.stopwords |= {
-            "hon",
-            "house",
-            "member",
-            "common",
-            "speaker",
-            "mr",
-            "friend",
-            "gentleman",
-            "one",
-            "would",
-        }
+
+        # Add custom stopwords if present
+        if "custom_stopwords" in settings:
+            self.stopwords.update(settings["custom_stopwords"])
+
         logger.info(
             f"Loaded language '{self.language}' with {len(self.stopwords)} stopwords"
         )
@@ -1041,3 +1018,33 @@ class SCA:
         )
         self.conn.commit()
         logger.info(f"Successfully inserted token data into '{table_name}'.")
+
+    def add_stopwords(self, stopwords: set):
+        """Add custom stopwords programmatically.
+
+        Args:
+            stopwords: A set of strings to add as stopwords.
+
+        Raises:
+            TypeError: If stopwords is not a set.
+        """
+        if not isinstance(stopwords, set):
+            raise TypeError("Stopwords must be provided as a set")
+
+        self.stopwords.update(stopwords)
+        logger.info(f"Added {len(stopwords)} custom stopwords")
+
+    def remove_stopwords(self, stopwords: set):
+        """Remove stopwords programmatically.
+
+        Args:
+            stopwords: A set of strings to remove from stopwords.
+
+        Raises:
+            TypeError: If stopwords is not a set.
+        """
+        if not isinstance(stopwords, set):
+            raise TypeError("Stopwords must be provided as a set")
+
+        self.stopwords.difference_update(stopwords)
+        logger.info(f"Removed {len(stopwords)} stopwords")

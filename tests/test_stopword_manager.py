@@ -73,10 +73,6 @@ def test_invalid_stopwords_modification():
         corpus.remove_stopwords("not_a_set")
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="Red Phase - Need to implement custom stopwords persistence",
-)
 def test_stopwords_persistence(tmp_path):
     # Create initial corpus with custom stopwords
     yml_path = tmp_path / "test_stopwords.yml"
@@ -100,10 +96,6 @@ def test_stopwords_persistence(tmp_path):
     assert "the" not in loaded_corpus.stopwords  # English stopword
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="Red Phase - Need to implement custom stopwords persistence",
-)
 def test_invalid_stopwords_config(tmp_path):
     yml_path = tmp_path / "test_invalid_stopwords.yml"
     db_path = tmp_path / "test_invalid_stopwords.sqlite3"
