@@ -210,6 +210,7 @@ class TestFileAndConfigLoading:
             # id_col is missing
             "text_column: text\n"
             "columns: [col1, col2]\n"
+            "language: english\n"
         )
         yml_path = tmp_path / "missing_key.yml"
         with open(yml_path, "w") as f:

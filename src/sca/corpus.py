@@ -19,21 +19,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-sw = set(stopwords.words("english"))
-sw |= {
-    "hon",
-    "house",
-    "member",
-    "common",
-    "speaker",
-    "mr",
-    "friend",
-    "gentleman",
-}
-sw |= {"one", "would"}
-
-
-# todo: move to separate file.
 cleaner_pattern = re.compile(r"[^a-z]+")
 tokenizer_pattern = re.compile(r"\s+")
 
@@ -133,6 +118,27 @@ def from_yml(yml_path):
 class SCA:
     db_path = Path("sca.sqlite3")
 
+    def __init__(self, language="english"):
+        if not language in stopwords.fileids():
+            raise ValueError(f"Invalid language code '{language}'")
+        self.language = language
+        self.stopwords = set(stopwords.words(language))
+        self.stopwords |= {
+            "hon",
+            "house",
+            "member",
+            "common",
+            "speaker",
+            "mr",
+            "friend",
+            "gentleman",
+            "one",
+            "would",
+        }
+        logger.info(
+            f"Initialized SCA with language '{language}' and {len(self.stopwords)} stopwords"
+        )
+
     def read_file(
         self,
         tsv_path: Path | str,
@@ -211,8 +217,8 @@ class SCA:
                     self.yaml_path.resolve().parent,
                 )
             ),
-            # Source file w/ hash?
             "collocates": self.collocates,
+            "language": self.language,
         }
         return settings
 
@@ -243,6 +249,26 @@ class SCA:
         with open(settings_path, "r", encoding="utf8") as f:
             settings = safe_load(f)
         logger.info(f"Successfully loaded settings from {self.yaml_path}")
+
+        self.language = settings["language"]
+        if not self.language in stopwords.fileids():
+            raise ValueError(f"Invalid language code '{self.language}'")
+        self.stopwords = set(stopwords.words(self.language))
+        self.stopwords |= {
+            "hon",
+            "house",
+            "member",
+            "common",
+            "speaker",
+            "mr",
+            "friend",
+            "gentleman",
+            "one",
+            "would",
+        }
+        logger.info(
+            f"Loaded language '{self.language}' with {len(self.stopwords)} stopwords"
+        )
 
         self.db_path = Path(settings_path).parent / Path(settings["db_path"])
         logger.info(f"Set db_path to {self.db_path} from settings file.")
@@ -432,7 +458,7 @@ class SCA:
         pos_dict = {_: [] for _ in patterns}
         stops = 0
         for i, token in enumerate(tokens):
-            if token.lower() in sw:
+            if token.lower() in self.stopwords:
                 stops += 1
             else:
                 for pattern in patterns:
@@ -909,7 +935,7 @@ class SCA:
             for pos, raw_token in enumerate(tokenizer(text)):
                 token = cleaner(raw_token)
 
-                is_sw = token in sw
+                is_sw = token in self.stopwords
 
                 if is_sw:
                     sw_pos_adjust += 1
