@@ -43,7 +43,9 @@ def get_min_window(pos1, pos2):
     return min(abs(p1 - p2) for p1 in pos1 for p2 in pos2)
 
 
-def from_file(tsv_path: str | Path, db_path: str | Path, id_col: str, text_column: str):
+def from_file(
+    tsv_path: str | Path, db_path: str | Path, id_col: str, text_column: str
+):
     corpus = SCA()
     corpus.read_file(
         db_path=db_path,
@@ -126,7 +128,9 @@ class SCA:
             settings = safe_load(f)
 
         self.db_path = Path(settings_path).parent / Path(settings["db_path"])
-        self.collocates = set(tuple(collocate) for collocate in settings["collocates"])
+        self.collocates = set(
+            tuple(collocate) for collocate in settings["collocates"]
+        )
         self.id_col = settings["id_col"]
         self.text_column = settings["text_column"]
         self.columns = list(settings["columns"])
@@ -159,7 +163,9 @@ class SCA:
             raise AttributeError(
                 f"Column {self.text_column} not found in {source_path}"
             )
-        data.columns = [col.strip().replace(" ", "_").lower() for col in data.columns]
+        data.columns = [
+            col.strip().replace(" ", "_").lower() for col in data.columns
+        ]
         self.columns = set(data.columns) - {self.id_col, self.text_column}
         self.set_data_cols()
 
@@ -286,7 +292,9 @@ class SCA:
         clean_terms = set()
         for collocate in collocates:
             clean_pair = {
-                cleaner(pattern) for pattern in collocate if not str(pattern).isdigit()
+                cleaner(pattern)
+                for pattern in collocate
+                if not str(pattern).isdigit()
             }
 
             if len(clean_pair) != 2:
@@ -377,8 +385,8 @@ class SCA:
     # add function for tabulation of the results ...
     ## headers = [d[0] for d in cursor.description]
 
-    def create_collocate_group(self, name, collocates):
-        table_name = "group_" + name.strip().replace(" ", "_")
+    def create_collocate_group(self, collocate_name, collocates):
+        table_name = "group_" + collocate_name.strip().replace(" ", "_")
 
         self.conn.execute(
             """create table if not exists named_collocate (
@@ -389,11 +397,11 @@ class SCA:
             window integer)"""
         )
 
-        self.conn.execute(
+        self.conn.executemany(
             f"""
             insert into named_collocate (name, table_name, term1,
               term2, window)
-            values ({name}, {table_name}, ?, ?, ?)
+            values ("{collocate_name}", "{table_name}", ?, ?, ?)
             """,
             collocates,
         )
@@ -414,7 +422,7 @@ class SCA:
         pattern_to_targets = defaultdict(set)
         for pattern1, pattern2, window in collocates:
             pattern_to_targets[pattern1] |= {
-                (pattern_to_targets, window),
+                (pattern2, window),
             }
             pattern_to_targets[pattern2] |= {
                 (pattern1, window),
@@ -460,9 +468,21 @@ class SCA:
                     ]
                 )
 
-            for i, (_, _, pos_sw, _, token, is_sw, _) in speech_data:
+            for i, (_, _, pos_sw, _, token, is_sw, _) in enumerate(
+                speech_data
+            ):
                 if is_sw:
-                    speech_data[i].append(False, None, None)
+                    speech_data[i][-3:] = [False, None, None]
 
                 else:
                     pass
+
+        self.conn.executemany(
+            f"""
+            insert into {table_name} (text_fk, raw_text, token,
+            sw, conterm, collocate_begin, collocate_end)
+            values (?, ?, ?, ?, ?, ?, ?)
+            """,
+            speech_data,
+        )
+        self.conn.commit()
