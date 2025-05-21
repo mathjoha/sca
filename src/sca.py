@@ -134,6 +134,10 @@ class SCA:
         self.id_col = settings["id_col"]
         self.text_column = settings["text_column"]
         self.columns = list(settings["columns"])
+        self.set_data_cols()
+
+    def set_data_cols(self):
+        self.data_cols = ", ".join(self.columns)
 
     def _add_term(self, term):
         self.tabulate_term(term)
@@ -163,6 +167,7 @@ class SCA:
             col.strip().replace(" ", "_").lower() for col in data.columns
         ]
         self.columns = set(data.columns) - {self.id_col, self.text_column}
+        self.set_data_cols()
 
         db["raw"].insert_all(data.to_dict(orient="records"))
 
@@ -326,13 +331,11 @@ class SCA:
     def count_with_collocates(self, collocates):
         id_query = self.collocate_to_speech_query(collocates)
 
-        data_cols = ", ".join(self.columns)
-
         c = self.conn.execute(
             f"""
-            select {data_cols}, count(rowid) from raw
+            select {self.data_cols}, count(rowid) from raw
             where {self.id_col} in {id_query}
-            group by {data_cols}
+            group by {self.data_cols}
             """
         )
 
