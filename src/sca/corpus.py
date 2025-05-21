@@ -13,7 +13,9 @@ from tqdm.auto import tqdm
 from yaml import safe_dump, safe_load
 
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    filename="sca.log",
 )
 logger = logging.getLogger(__name__)
 
