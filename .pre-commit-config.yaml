@@ -23,14 +23,23 @@ repos:
     hooks:
     -   id: coverage
         name: pytest-coverage-check
-        entry: "pytest --cov=src/sca/"
+        entry: "pytest -m 'not slow' --cov=src/sca/"
         language: system
         pass_filenames: false
         always_run: true
         verbose: true
+        stages: [commit]
     -   id: coverage-badge
         name: coverage-badge
         entry: "coverage-badge -fo media/coverage.svg"
         language: system
         pass_filenames: false
         always_run: true
+    -   id: full-test-suite
+        name: run-all-tests
+        entry: "pytest --cov=src/sca/"
+        language: system
+        pass_filenames: false
+        always_run: true
+        verbose: true
+        stages: [push, post-merge]

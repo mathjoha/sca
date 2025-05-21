@@ -57,6 +57,9 @@ addopts = [
 ]
 testpaths = ["tests"]
 pythonpath = "src/sca/"
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')"
+]
 
 [dependency-groups]
 dev = [
