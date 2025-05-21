@@ -8,7 +8,7 @@ import sca
 
 
 @pytest.fixture(scope="module")
-def tsv_file():
+def csv_file():
     here = Path(__file__).parent
     tsv_path = here / "uk_hansard_100rows.csv"
     return tsv_path
@@ -25,10 +25,10 @@ def db_path(temp_dir):
 
 
 @pytest.fixture(scope="module")
-def sca_filled(db_path, tsv_file):
+def sca_filled(db_path, csv_file):
     corpus = sca.from_file(
         db_path=db_path,
-        tsv_path=tsv_file,
+        tsv_path=csv_file,
         id_col="speech_id",
         text_column="speech_text",
     )
@@ -105,11 +105,11 @@ def test_collocate_lenw10(speeches_with_collocates):
     assert len([w for *_, w in speeches_with_collocates if w <= 10]) == 9
 
 
-def test_set_name_id_col(db_path, tsv_file):
+def test_set_name_id_col(db_path, csv_file):
     with pytest.raises(AttributeError, match="Column id_col_name not found"):
         sca.from_file(
             db_path=db_path.parent / "not_sca.sqlite3",
-            tsv_path=tsv_file,
+            tsv_path=csv_file,
             id_col="id_col_name",
             text_column="speech_text",
         )
