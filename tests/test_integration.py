@@ -181,8 +181,9 @@ class TestFileAndConfigLoading:
         # Act & Assert
         # sqlite_utils doesn't create 'raw' table if insert_all gets empty data.
         # Subsequent create_index call fails.
+        # Updated: Now expecting ValueError due to changes in seed_db for empty files.
         with pytest.raises(
-            sqlite3.OperationalError, match="no such table: main.raw"
+            ValueError, match=f"Input file {headers_only_tsv_path} is empty."
         ):
             sca.read_file(
                 tsv_path=headers_only_tsv_path,

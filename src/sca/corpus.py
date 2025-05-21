@@ -43,6 +43,10 @@ def get_min_window(pos1, pos2):
     return min(abs(p1 - p2) for p1 in pos1 for p2 in pos2)
 
 
+def sqlite3_friendly(column_name):
+    return not re.search(r"[^a-zA-Z0-9_]", column_name)
+
+
 def from_file(
     tsv_path: str | Path, db_path: str | Path, id_col: str, text_column: str
 ):
@@ -118,7 +122,7 @@ class SCA:
         settings["collocates"] = list(settings["collocates"])
         settings["id_col"] = self.id_col
         settings["text_column"] = self.text_column
-        settings["columns"] = list(self.columns)
+        settings["columns"] = sorted(list(self.columns))
         with open(self.yaml_path, "w", encoding="utf8") as f:
             safe_dump(data=settings, stream=f)
 
@@ -133,7 +137,7 @@ class SCA:
         )
         self.id_col = settings["id_col"]
         self.text_column = settings["text_column"]
-        self.columns = list(settings["columns"])
+        self.columns = sorted(settings["columns"])
         self.set_data_cols()
 
     def set_data_cols(self):
@@ -155,6 +159,9 @@ class SCA:
 
         data = pd.read_csv(source_path, sep=sep)
 
+        if data.empty:
+            raise ValueError(f"Input file {source_path} is empty.")
+
         if self.id_col not in data.columns:
             raise AttributeError(
                 f"Column {self.id_col} not found in {source_path}",
@@ -164,10 +171,13 @@ class SCA:
                 f"Column {self.text_column} not found in {source_path}"
             )
 
-        cleaned_column_names_list = [
-            col.strip().replace(" ", "_").lower() for col in data.columns
-        ]
-        self.columns = set(cleaned_column_names_list) - {
+        for column_name in data.columns:
+            if not sqlite3_friendly(column_name):
+                raise ValueError(
+                    f"Column name {column_name} is not SQLite-friendly."
+                )
+
+        self.columns = set(data.columns) - {
             self.id_col,
             self.text_column,
         }
