@@ -211,3 +211,27 @@ def test_file_only_id_text(tmp_path: Path):
     assert (
         hasattr(corpus_load, "columns") and list(corpus_load.columns) == []
     ), f"Expected empty list for columns, got {getattr(corpus_load, 'columns', 'attribute missing')}"
+
+
+@pytest.mark.xfail(strict=True, reason="Red Phase: Test loading")
+def test_loading(tmp_path: Path):
+    csv_path = tmp_path / "small_csv.csv"
+    db_path = tmp_path / "small_csv.sqlite3"
+    yml_path = tmp_path / "small_csv.yml"
+
+    create_dummy_csv(csv_path, 5, 5)
+
+    corpus_write = SCA()
+    corpus_write.read_file(
+        tsv_path=csv_path,
+        id_col="id",
+        text_column="text",
+        db_path=db_path,
+    )
+    corpus_write.save()
+
+    assert yml_path.exists()
+    corpus_load = SCA()
+    corpus_load.load(yml_path)
+
+    assert corpus_write == corpus_load
