@@ -117,6 +117,8 @@ class SCA:
         settings = self.settings_dict()
         settings["collocates"] = list(settings["collocates"])
         settings["id_col"] = self.id_col
+        settings["text_column"] = self.text_column
+        settings["columns"] = list(self.columns)
         with open(self.yaml_path, "w", encoding="utf8") as f:
             safe_dump(data=settings, stream=f)
 
@@ -130,6 +132,12 @@ class SCA:
             tuple(collocate) for collocate in settings["collocates"]
         )
         self.id_col = settings["id_col"]
+        self.text_column = settings["text_column"]
+        self.columns = list(settings["columns"])
+        self.set_data_cols()
+
+    def set_data_cols(self):
+        self.data_cols = ", ".join(self.columns)
 
     def _add_term(self, term):
         self.tabulate_term(term)
@@ -155,6 +163,11 @@ class SCA:
             raise AttributeError(
                 f"Column {self.text_column} not found in {source_path}"
             )
+        data.columns = [
+            col.strip().replace(" ", "_").lower() for col in data.columns
+        ]
+        self.columns = set(data.columns) - {self.id_col, self.text_column}
+        self.set_data_cols()
 
         db["raw"].insert_all(data.to_dict(orient="records"))
 
@@ -189,7 +202,7 @@ class SCA:
             "select tbl_name from sqlite_master"
         ).fetchall():
             self.conn.execute(
-                f"create table {cleaned_pattern} (speech_fk)",
+                f"create table {cleaned_pattern} (text_fk)",
                 data,
             )
             self.conn.execute(
@@ -216,11 +229,11 @@ class SCA:
         for speech_id, text in tqdm(
             self.conn.execute(
                 f"""
-                select {self.id_col}, speech_text from raw
+                select {self.id_col}, {self.text_column} from raw
                 join {clean1}
-                on {clean1}.speech_fk == {self.id_col}
+                on {clean1}.text_fk == {self.id_col}
                 join {clean2}
-                on {clean2}.speech_fk == {self.id_col}
+                on {clean2}.text_fk == {self.id_col}
                 """,
                 {"term1": clean2, "term2": clean2},
             ),
@@ -229,7 +242,7 @@ class SCA:
                 f"""
                 select count(*) from {clean1}
                 join {clean2}
-                on {clean1}.speech_fk == {clean2}.speech_fk
+                on {clean1}.text_fk == {clean2}.text_fk
                 """
             ).fetchone()[0],
         ):
@@ -260,8 +273,8 @@ class SCA:
 
         self.conn.executemany(
             f"""
-            insert into collocate_window ({self.text_column},
-            pattern1, pattern2, window)
+            insert into collocate_window
+            ({self.text_column}, pattern1, pattern2, window)
             values (?, ?, ?, ?)""",
             data,
         )
@@ -320,11 +333,9 @@ class SCA:
 
         c = self.conn.execute(
             f"""
-            select parliament, party, party_in_power, district_class,
-            seniority, count(rowid) from raw
+            select {self.data_cols}, count(rowid) from raw
             where {self.id_col} in {id_query}
-            group by parliament, party, party_in_power,
-            district_class, seniority
+            group by {self.data_cols}
             """
         )
 
@@ -333,12 +344,10 @@ class SCA:
     def counts_by_subgroups(self, collocates, out_file):
         # todo: test pre-calculating the baseline
         df_baseline = pd.read_sql_query(
-            """
-            select parliament, party, party_in_power, district_class,
-            seniority, count(rowid) as total
+            f"""
+            select {self.data_cols}, count(rowid) as total
             from raw
-            group by parliament, party, party_in_power,
-            district_class, seniority
+            group by {self.data_cols}
             """,
             self.conn,
         ).fillna("N/A")
@@ -376,21 +385,30 @@ class SCA:
     # add function for tabulation of the results ...
     ## headers = [d[0] for d in cursor.description]
 
-    def create_collocate_group(self, name, collocates):
-        table_name = "group_" + name.strip().replace(" ", "_")
+    def create_collocate_group(self, collocate_name, collocates):
+        table_name = "group_" + collocate_name.strip().replace(" ", "_")
 
         self.conn.execute(
+            """create table if not exists named_collocate (
+            name text,
+            table_name text,
+            term1 text,
+            term2 text,
+            window integer)"""
+        )
+
+        self.conn.executemany(
             f"""
             insert into named_collocate (name, table_name, term1,
               term2, window)
-            values ({name}, {table_name}, ?, ?, ?)
+            values ("{collocate_name}", "{table_name}", ?, ?, ?)
             """,
             collocates,
         )
 
         self.conn.execute(
             f"""
-            create table {table_name} (speech_fk, raw_text, token,
+            create table {table_name} (text_fk, raw_text, token,
             sw, conterm, collocate_begin, collocate_end)
             """
         )
@@ -404,13 +422,13 @@ class SCA:
         pattern_to_targets = defaultdict(set)
         for pattern1, pattern2, window in collocates:
             pattern_to_targets[pattern1] |= {
-                (pattern_to_targets, window),
+                (pattern2, window),
             }
             pattern_to_targets[pattern2] |= {
                 (pattern1, window),
             }
 
-        for speech_fk, text in self.conn.execute(
+        for text_fk, text in self.conn.execute(
             f"""
             select {self.id_col}, {self.text_column} from raw
             where {self.id_col} in {id_query}
@@ -440,7 +458,7 @@ class SCA:
 
                 speech_data.append(
                     [
-                        speech_fk,
+                        text_fk,
                         pos,
                         sw_pos,
                         raw_token,
@@ -450,9 +468,21 @@ class SCA:
                     ]
                 )
 
-            for i, (_, _, pos_sw, _, token, is_sw, _) in speech_data:
+            for i, (_, _, pos_sw, _, token, is_sw, _) in enumerate(
+                speech_data
+            ):
                 if is_sw:
-                    speech_data[i].append(False, None, None)
+                    speech_data[i][-3:] = [False, None, None]
 
                 else:
                     pass
+
+        self.conn.executemany(
+            f"""
+            insert into {table_name} (text_fk, raw_text, token,
+            sw, conterm, collocate_begin, collocate_end)
+            values (?, ?, ?, ?, ?, ?, ?)
+            """,
+            speech_data,
+        )
+        self.conn.commit()

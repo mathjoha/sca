@@ -1,0 +1,10 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+Keep edits small whenever possible.
+After edits run:
+`git add `
+`pre-commit`
+`git commit -am "Concise, descriptive message"`

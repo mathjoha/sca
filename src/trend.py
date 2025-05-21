@@ -9,7 +9,8 @@ from ipywidgets import (
     Textarea,
     VBox,
 )
-from main import SCA
+
+from sca import SCA
 
 
 class StructuralCollocationAnalysis(SCA):
