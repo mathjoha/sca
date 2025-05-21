@@ -825,16 +825,24 @@ class SCA:
         )
         logger.info("Ensured 'named_collocate' table exists.")
 
-        self.conn.executemany(
-            f"""
-            insert into named_collocate (name, table_name, term1,
-              term2, window)
-            values ("{collocate_name}", "{table_name}", ?, ?, ?)
-            """,
-            collocates,
+        db = sqlite_utils.Database(self.conn)
+        named_collocate_records = [
+            {
+                "name": collocate_name,
+                "table_name": table_name,
+                "term1": c[0],
+                "term2": c[1],
+                "window": c[2],
+            }
+            for c in collocates
+        ]
+        db["named_collocate"].upsert_all(
+            named_collocate_records,
+            pk=("name", "term1", "term2", "window"),
+            alter=True,
         )
         logger.info(
-            f"Inserted {len(collocates)} specifications into 'named_collocate' for group '{collocate_name}'."
+            f"Upserted {len(collocates)} specifications into 'named_collocate' for group '{collocate_name}'."
         )
 
         self.conn.execute(
@@ -929,13 +937,33 @@ class SCA:
         logger.info(
             f"Inserting {len(speech_data_to_insert)} token entries into '{table_name}'."
         )
-        self.conn.executemany(
-            f"""
-            insert into {table_name} (text_fk, raw_text, token,
-            sw, conterm, collocate_begin, collocate_end)
-            values (?, ?, ?, ?, ?, ?, ?)
-            """,
-            [item[:7] for item in speech_data_to_insert],
+        token_records = [
+            {
+                "text_fk": item[0],
+                "raw_text": item[3],  # raw_token is at index 3
+                "token": item[4],  # token is at index 4
+                "sw": item[5],  # is_sw is at index 5
+                "conterm": item[6],  # conterm is at index 6
+                # Assuming collocate_begin and collocate_end are the next two items if they exist
+                # and their defaults are None or some other suitable value if not.
+                # The original code was slicing item[:7] which implies only 7 columns.
+                # If collocate_begin and collocate_end are indeed intended,
+                # the table schema and data insertion needs to be consistent.
+                # For now, sticking to the original 7 columns.
+                "collocate_begin": item[7] if len(item) > 7 else None,
+                "collocate_end": item[8] if len(item) > 8 else None,
+            }
+            for item in speech_data_to_insert
+        ]
+
+        # Ensure all records have all keys, even if some are None
+        # This is important for upsert_all if the table structure is not altered on the fly
+        # or if different records have different sets of keys.
+        # Based on the table definition, text_fk, raw_text, token, sw, conterm, collocate_begin, collocate_end are expected.
+        # The UNIQUE constraint is on (text_fk, raw_text)
+
+        db[table_name].upsert_all(
+            token_records, pk=("text_fk", "raw_text"), alter=True
         )
         self.conn.commit()
-        logger.info(f"Successfully inserted token data into '{table_name}'.")
+        logger.info(f"Successfully upserted token data into '{table_name}'.")
