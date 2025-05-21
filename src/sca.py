@@ -268,8 +268,8 @@ class SCA:
 
         self.conn.executemany(
             f"""
-            insert into collocate_window ({self.text_column},
-            pattern1, pattern2, window)
+            insert into collocate_window
+            ({self.text_column}, pattern1, pattern2, window)
             values (?, ?, ?, ?)""",
             data,
         )
