@@ -1,5 +1,5 @@
 2. Modify `tabulate_term` method:
-   - Add unique constraint to term tables
+   - Add unique constraint to term tables ✅
    - Add error handling for duplicate entries
 
 3. Modify `create_collocate_group` method:

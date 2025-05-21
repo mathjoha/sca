@@ -458,7 +458,7 @@ class SCA:
                 f"Table for term '{cleaned_pattern}' does not exist. Creating and populating."
             )
             self.conn.execute(
-                f"create table {cleaned_pattern} (text_fk)",
+                f"create table {cleaned_pattern} (text_fk text unique)",
                 data,
             )
             self.conn.execute(

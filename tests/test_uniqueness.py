@@ -62,10 +62,6 @@ def test_collocate_window_prevents_duplicates_at_db_level(tmp_path: Path):
     conn.close()
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="Red Phase: DB uniqueness for term tables not yet implemented",
-)
 def test_term_tables_prevent_duplicate_text_fk(tmp_path: Path):
     db_path = tmp_path / "test_terms.sqlite3"
     tsv_content = "id\ttext\ntext1\tsome patterna here\ntext2\tanother patterna example\ntext3\tno target term"
