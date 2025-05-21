@@ -213,7 +213,6 @@ def test_file_only_id_text(tmp_path: Path):
     ), f"Expected empty list for columns, got {getattr(corpus_load, 'columns', 'attribute missing')}"
 
 
-@pytest.mark.xfail(strict=True, reason="Red Phase: Test loading")
 def test_loading(tmp_path: Path):
     csv_path = tmp_path / "small_csv.csv"
     db_path = tmp_path / "small_csv.sqlite3"
@@ -233,5 +232,7 @@ def test_loading(tmp_path: Path):
     assert yml_path.exists()
     corpus_load = SCA()
     corpus_load.load(yml_path)
+
+    assert corpus_write != None
 
     assert corpus_write == corpus_load

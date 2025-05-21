@@ -140,8 +140,32 @@ class SCA:
         self.columns = sorted(settings["columns"])
         self.set_data_cols()
 
+        self.conn = sqlite3.connect(self.db_path)
+        self.terms = set(
+            _[0]
+            for _ in self.conn.execute(
+                """
+                select name from sqlite_master
+                where type == "table"
+                and instr(name, "_") == 0
+                """
+            ).fetchall()
+        )
+
     def set_data_cols(self):
         self.data_cols = ", ".join(self.columns)
+
+    def __eq__(self, other):
+        if not isinstance(other, SCA):
+            return False
+
+        return (
+            self.collocates == other.collocates
+            and self.id_col == other.id_col
+            and self.text_column == other.text_column
+            and self.columns == other.columns
+            and self.terms == other.terms
+        )
 
     def _add_term(self, term):
         self.tabulate_term(term)
@@ -181,10 +205,13 @@ class SCA:
                     f"Column name {column_name} is not SQLite-friendly."
                 )
 
-        self.columns = set(map(str.lower, data.columns)) - {
-            self.id_col,
-            self.text_column,
-        }
+        self.columns = sorted(
+            set(map(str.lower, data.columns))
+            - {
+                self.id_col,
+                self.text_column,
+            }
+        )
 
         if len(self.columns) != (len(data.columns) - 2):
             raise ValueError(
