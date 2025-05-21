@@ -117,6 +117,7 @@ class SCA:
         settings = self.settings_dict()
         settings["collocates"] = list(settings["collocates"])
         settings["id_col"] = self.id_col
+        settings["text_column"] = self.text_column
         with open(self.yaml_path, "w", encoding="utf8") as f:
             safe_dump(data=settings, stream=f)
 
@@ -130,6 +131,7 @@ class SCA:
             tuple(collocate) for collocate in settings["collocates"]
         )
         self.id_col = settings["id_col"]
+        self.text_column = settings["text_column"]
 
     def _add_term(self, term):
         self.tabulate_term(term)
