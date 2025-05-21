@@ -155,6 +155,10 @@ class SCA:
     def set_data_cols(self):
         self.data_cols = ", ".join(self.columns)
 
+    def __hash__(self):
+        with open(self.db_path, "rb") as f:
+            return hash(f.read())
+
     def __eq__(self, other):
         if not isinstance(other, SCA):
             return False
@@ -165,6 +169,7 @@ class SCA:
             and self.text_column == other.text_column
             and self.columns == other.columns
             and self.terms == other.terms
+            and hash(self) == hash(other)
         )
 
     def _add_term(self, term):
