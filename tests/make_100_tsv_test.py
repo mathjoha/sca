@@ -108,6 +108,18 @@ def test_set_name_id_col(db_path, tsv_file: Path):
         )
 
 
+def test_set_name_text_column(db_path, tsv_file: Path):
+    with pytest.raises(
+        AttributeError, match="Column speech_text_name not found"
+    ):
+        sca.from_file(
+            db_path=db_path.parent / "speech_sca.sqlite3",
+            tsv_path=tsv_file,
+            id_col="speech_id",
+            text_column="speech_text_name",
+        )
+
+
 def test_name_id_col(sca_filled: sca.SCA):
     assert sca_filled.id_col == "speech_id"
 
