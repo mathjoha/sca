@@ -1,6 +1,5 @@
 import atexit
 import logging
-import os
 import re
 import sqlite3
 from collections import defaultdict
@@ -8,6 +7,7 @@ from fnmatch import fnmatch
 from pathlib import Path
 
 import pandas as pd
+import sqlite_utils
 from nltk.corpus import stopwords
 from tqdm.auto import tqdm
 from yaml import safe_dump, safe_load
@@ -43,9 +43,16 @@ def get_min_window(pos1, pos2):
     return min(abs(p1 - p2) for p1 in pos1 for p2 in pos2)
 
 
-def from_tsv(tsv_path: str | Path, db_path: str | Path, id_col: str):
+def from_file(
+    tsv_path: str | Path, db_path: str | Path, id_col: str, text_column: str
+):
     corpus = SCA()
-    corpus.read_tsv(db_path=db_path, tsv_path=tsv_path, id_col=id_col)
+    corpus.read_file(
+        db_path=db_path,
+        tsv_path=tsv_path,
+        id_col=id_col,
+        text_column=text_column,
+    )
 
     return corpus
 
@@ -59,13 +66,19 @@ def from_yml(yml_path):
 class SCA:
     db_path = Path("sca.sqlite3")
 
-    def read_tsv(
-        self, db_path="sca.sqlite3", tsv_path: Path | None = None, id_col=None
+    def read_file(
+        self,
+        tsv_path: Path | str,
+        id_col: str,
+        text_column: str,
+        db_path="sca.sqlite3",
     ):
         self.db_path = Path(db_path)
+
         self.yaml_path = self.db_path.with_suffix(".yml")
+
         self.id_col = id_col
-        self.text_column = "speech_fk"
+        self.text_column = text_column
 
         if not self.db_path.exists():
             self.seed_db(tsv_path)
@@ -74,7 +87,11 @@ class SCA:
         self.terms = set(
             _[0]
             for _ in self.conn.execute(
-                'select name from sqlite_master where type == "table" and instr(name, "_") == 0'
+                """
+                select name from sqlite_master
+                where type == "table"
+                and instr(name, "_") == 0
+                """
             ).fetchall()
         )
         self.collocates = set(
@@ -87,7 +104,9 @@ class SCA:
     def settings_dict(self):
         settings = {
             "db_path": str(
-                self.db_path.resolve().relative_to(self.yaml_path.resolve().parent)
+                self.db_path.resolve().relative_to(
+                    self.yaml_path.resolve().parent,
+                )
             ),
             # Source file w/ hash?
             "collocates": self.collocates,
@@ -107,7 +126,9 @@ class SCA:
             settings = safe_load(f)
 
         self.db_path = Path(settings_path).parent / Path(settings["db_path"])
-        self.collocates = set(tuple(collocate) for collocate in settings["collocates"])
+        self.collocates = set(
+            tuple(collocate) for collocate in settings["collocates"]
+        )
         self.id_col = settings["id_col"]
 
     def _add_term(self, term):
@@ -117,40 +138,36 @@ class SCA:
         }
 
     def seed_db(self, source_path):
-        with sqlite3.connect(self.db_path) as conn:
-            with open(source_path, "r", encoding="utf8") as f:
-                next(f)
-                c = 0
-                for _ in f:
-                    c += 1
+        db = sqlite_utils.Database(self.db_path)
 
-            with open(source_path, "r", encoding="utf8") as f:
-                data = []
-                line = next(f)
-                headers = ",".join(line.rstrip().split("\t"))
-                qmarks = ",".join("?" for _ in line.split("\t"))
-                conn.execute(f"CREATE TABLE raw ({headers})")
-                conn.execute(
-                    f"CREATE UNIQUE INDEX index_sentence on raw ({self.id_col})"
-                )
+        if source_path.suffix.lower() == ".tsv":
+            sep = "\t"
+        else:
+            sep = ","
 
-                for i, line in tqdm(enumerate(f), total=c):
-                    data.append(line.split("\t"))
+        data = pd.read_csv(source_path, sep=sep)
 
-                    if len(data) == 500_000:
-                        conn.executemany(
-                            f"INSERT INTO raw ({headers}) values ({qmarks})",
-                            data,
-                        )
-                        data = []
-            if len(data) > 0:
-                conn.executemany(f"INSERT INTO raw ({headers}) values ({qmarks})", data)
-
-            conn.execute(
-                f"CREATE TABLE collocate_window ({self.text_column}, pattern1, pattern2, window)"
+        if self.id_col not in data.columns:
+            raise AttributeError(
+                f"Column {self.id_col} not found in {source_path}",
+            )
+        if self.text_column not in data.columns:
+            raise AttributeError(
+                f"Column {self.text_column} not found in {source_path}"
             )
 
-            conn.commit()
+        db["raw"].insert_all(data.to_dict(orient="records"))
+
+        db["raw"].create_index([self.id_col], unique=True)
+
+        db["collocate_window"].create(
+            {
+                self.text_column: str,
+                "pattern1": str,
+                "pattern2": str,
+                "window": int,
+            }
+        )
 
     def get_positions(self, tokens, count_stopwords=False, *patterns):
         pos_dict = {_: [] for _ in patterns}
@@ -168,13 +185,18 @@ class SCA:
 
     def tabulate_term(self, cleaned_pattern):
         data = {"table": cleaned_pattern}
-        if (
-            not (cleaned_pattern,)
-            in self.conn.execute("select tbl_name from sqlite_master").fetchall()
-        ):
-            self.conn.execute(f"create table {cleaned_pattern} (speech_fk)", data)
+        if (cleaned_pattern,) not in self.conn.execute(
+            "select tbl_name from sqlite_master"
+        ).fetchall():
             self.conn.execute(
-                f'insert into {cleaned_pattern} select {self.id_col} from raw where speech_text like "%" || :table || "%"',
+                f"create table {cleaned_pattern} (speech_fk)",
+                data,
+            )
+            self.conn.execute(
+                f"""
+                insert into {cleaned_pattern} select {self.id_col} from
+                raw where {self.text_column} like "%" || :table || "%"
+                """,
                 data,
             )
             self.conn.commit()
@@ -193,12 +215,22 @@ class SCA:
         data = []
         for speech_id, text in tqdm(
             self.conn.execute(
-                f"select {self.id_col}, speech_text from raw join {clean1} on {clean1}.speech_fk == {self.id_col} join {clean2} on {clean2}.speech_fk == {self.id_col}",
+                f"""
+                select {self.id_col}, speech_text from raw
+                join {clean1}
+                on {clean1}.speech_fk == {self.id_col}
+                join {clean2}
+                on {clean2}.speech_fk == {self.id_col}
+                """,
                 {"term1": clean2, "term2": clean2},
             ),
             desc=f"Calculating windows for {pattern1} - {pattern2}",
             total=self.conn.execute(
-                f"select count(*) from {clean1} join {clean2} on {clean1}.speech_fk == {clean2}.speech_fk"
+                f"""
+                select count(*) from {clean1}
+                join {clean2}
+                on {clean1}.speech_fk == {clean2}.speech_fk
+                """
             ).fetchone()[0],
         ):
             pos_dict = self.get_positions(
@@ -227,20 +259,29 @@ class SCA:
             data.append((None, pattern1, pattern2, None))
 
         self.conn.executemany(
-            "insert into collocate_window (speech_fk, pattern1, pattern2, window) values (?, ?, ?, ?)",
+            f"""
+            insert into collocate_window ({self.text_column},
+            pattern1, pattern2, window)
+            values (?, ?, ?, ?)""",
             data,
         )
         self.conn.commit()
 
     def collocate_to_condition(self, pattern1, pattern2, window):
-        return f' (pattern1 == "{pattern1}" and pattern2 == "{pattern2}" and window <= {window}) '
+        return f"""
+        (pattern1 == "{pattern1}"
+        and pattern2 == "{pattern2}"
+        and window <= {window})
+        """
 
     def add_collocates(self, collocates):
         prepared_collocates = set()
         clean_terms = set()
         for collocate in collocates:
             clean_pair = {
-                cleaner(pattern) for pattern in collocate if not str(pattern).isdigit()
+                cleaner(pattern)
+                for pattern in collocate
+                if not str(pattern).isdigit()
             }
 
             if len(clean_pair) != 2:
@@ -268,7 +309,8 @@ class SCA:
         )
 
         id_query = (
-            f" (select distinct speech_fk from collocate_window where {conditions}) "
+            f" (select distinct {self.text_column} from "
+            f"collocate_window where {conditions}) "
         )
 
         return id_query
@@ -277,7 +319,13 @@ class SCA:
         id_query = self.collocate_to_speech_query(collocates)
 
         c = self.conn.execute(
-            f"select parliament, party, party_in_power, district_class, seniority, count(rowid) from raw where {self.id_col} in {id_query} group by parliament, party, party_in_power, district_class, seniority"
+            f"""
+            select parliament, party, party_in_power, district_class,
+            seniority, count(rowid) from raw
+            where {self.id_col} in {id_query}
+            group by parliament, party, party_in_power,
+            district_class, seniority
+            """
         )
 
         return c
@@ -285,14 +333,27 @@ class SCA:
     def counts_by_subgroups(self, collocates, out_file):
         # todo: test pre-calculating the baseline
         df_baseline = pd.read_sql_query(
-            "select parliament, party, party_in_power, district_class, seniority, count(rowid) as total from raw group by parliament, party, party_in_power, district_class, seniority",
+            """
+            select parliament, party, party_in_power, district_class,
+            seniority, count(rowid) as total
+            from raw
+            group by parliament, party, party_in_power,
+            district_class, seniority
+            """,
             self.conn,
         ).fillna("N/A")
 
         id_query = self.collocate_to_speech_query(collocates)
 
         df_collocates = pd.read_sql_query(
-            f"select parliament, party, party_in_power, district_class, seniority, count(rowid) as collocate_count from raw where {self.id_col} in {id_query} group by parliament, party, party_in_power, district_class, seniority",
+            f"""
+            select parliament, party, party_in_power, district_class,
+            seniority, count(rowid) as collocate_count
+            from raw
+            where {self.id_col} in {id_query}
+            group by parliament, party, party_in_power,
+            district_class, seniority
+            """,
             self.conn,
         )
 
@@ -319,12 +380,19 @@ class SCA:
         table_name = "group_" + name.strip().replace(" ", "_")
 
         self.conn.execute(
-            f"insert into named_collocate (name, table_name, term1, term2, window) values ({name}, {table_name}, ?, ?, ?)",
+            f"""
+            insert into named_collocate (name, table_name, term1,
+              term2, window)
+            values ({name}, {table_name}, ?, ?, ?)
+            """,
             collocates,
         )
 
         self.conn.execute(
-            f"create table {table_name} (speech_fk, raw_text, token, sw, conterm, collocate_begin, collocate_end)"
+            f"""
+            create table {table_name} (speech_fk, raw_text, token,
+            sw, conterm, collocate_begin, collocate_end)
+            """
         )
 
         id_query = self.collocate_to_speech_query(collocates)
@@ -342,9 +410,11 @@ class SCA:
                 (pattern1, window),
             }
 
-        data = []
         for speech_fk, text in self.conn.execute(
-            f"select {self.id_col}, speech_text from raw where speechid in {id_query}"
+            f"""
+            select {self.id_col}, {self.text_column} from raw
+            where {self.id_col} in {id_query}
+            """
         ):
             sw_pos_adjust = 0
             speech_data = []
@@ -386,40 +456,3 @@ class SCA:
 
                 else:
                     pass
-
-
-class Speech:
-    def __init__(self, speech_id, raw_text, collocates):
-        self.speech_id = speech_id
-        self.tokens = [Token(self, raw_token) for raw_token in tokenizer(raw_text)]
-        self.collocates = collocates
-
-        self.collocate_tokens = []
-
-        self.patterns = set(
-            pattern for collocate in self.collocates for pattern in collocate[:2]
-        )
-
-
-class Token:
-    def __init__(self, speech, raw_token, pos):
-        self.speech = speech
-        self.token = cleaner(raw_token)
-
-        self.sw = self.Token in sw
-        self.pos = pos
-        self.sw_pos = pos
-
-        self.coll_patterns = [
-            pattern for pattern in self.speech.patterns if fnmatch(self.token, pattern)
-        ]
-
-        if len(self.coll_patterns) > 0:
-            self.speech.collocate_tokens.append(self)
-
-    def next_collocate(self):
-        pass
-
-
-if __name__ == "__main__":
-    pass

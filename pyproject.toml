@@ -5,6 +5,7 @@ dependencies =[
   "nltk",
   "ipywidgets",
   "PyYAML==6.0.2",
+  "sqlite-utils"
 ]
 name ="sca"
 dynamic = ["version"]
@@ -58,7 +59,7 @@ testpaths = ["tests"]
 pythonpath = "src"
 
 [dependency-groups]
-test = [
+dev = [
   "pytest",
   "pytest-cov",
   "coverage-badge"

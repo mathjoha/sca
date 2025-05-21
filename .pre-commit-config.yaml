@@ -26,8 +26,11 @@ repos:
         entry: "pytest --cov=src"
         language: system
         pass_filenames: false
+        always_run: true
+        verbose: true
     -   id: coverage-badge
         name: coverage-badge
         entry: "coverage-badge -fo media/coverage.svg"
         language: system
         pass_filenames: false
+        always_run: true
