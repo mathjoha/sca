@@ -326,13 +326,13 @@ class SCA:
     def count_with_collocates(self, collocates):
         id_query = self.collocate_to_speech_query(collocates)
 
+        data_cols = ", ".join(self.columns)
+
         c = self.conn.execute(
             f"""
-            select parliament, party, party_in_power, district_class,
-            seniority, count(rowid) from raw
+            select {data_cols}, count(rowid) from raw
             where {self.id_col} in {id_query}
-            group by parliament, party, party_in_power,
-            district_class, seniority
+            group by {data_cols}
             """
         )
 
