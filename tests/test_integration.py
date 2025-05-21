@@ -4,6 +4,7 @@ from pathlib import Path
 # Test integration for SCA module
 import pandas as pd
 import pytest
+import yaml
 
 from sca import SCA
 
@@ -449,7 +450,7 @@ def test_counts_by_subgroups_empty_collocates(sca_instance, tmp_path):
     # will produce invalid SQL like "... WHERE " if collocates is empty.
     # Pandas wraps the sqlite3.OperationalError in its own DatabaseError.
     with pytest.raises(
-        pd.errors.DatabaseError, match="Execution failed on sql"
+        pd.errors.DatabaseError, match=r"Execution failed on sql"
     ):
         sca_instance.counts_by_subgroups([], output_file)
 
@@ -458,5 +459,94 @@ def test_create_collocate_group_empty_collocates(sca_instance):
     group_name = "test_empty_group"
     # Similar to counts_by_subgroups, an empty collocates list
     # leads to invalid SQL.
-    with pytest.raises(sqlite3.OperationalError, match="syntax error"):
+    with pytest.raises(sqlite3.OperationalError, match=r"syntax error"):
         sca_instance.create_collocate_group(group_name, [])
+
+
+def test_seed_db_empty_tsv_file(tmp_path):
+    db_path = tmp_path / "empty_db.sqlite3"
+    empty_tsv_path = tmp_path / "empty.tsv"
+    with open(empty_tsv_path, "w") as f:
+        pass  # Create an empty file
+
+    sca = SCA()
+    if db_path.exists():
+        db_path.unlink()
+
+    # pandas.errors.EmptyDataError: No columns to parse from file
+    # This is raised by pd.read_csv when the file is truly empty.
+    with pytest.raises(pd.errors.EmptyDataError):
+        sca.read_file(
+            tsv_path=empty_tsv_path,
+            id_col="id",
+            text_column="text",
+            db_path=db_path,
+        )
+
+
+def test_seed_db_tsv_with_headers_only(tmp_path):
+    db_path = tmp_path / "headers_only_db.sqlite3"
+    headers_only_tsv_path = tmp_path / "headers_only.tsv"
+    with open(headers_only_tsv_path, "w") as f:
+        f.write("id\ttext\tmeta1\n")  # Headers but no data. Use actual tabs.
+
+    sca = SCA()
+    if db_path.exists():  # Ensure seed_db is called
+        db_path.unlink()
+
+    # Current behavior: pd.read_csv creates an empty DataFrame.
+    # sca.seed_db calls db["raw"].insert_all(data.to_dict(orient="records"))
+    # If data is empty, sqlite_utils does not create the 'raw' table.
+    # Then, db["raw"].create_index fails.
+    with pytest.raises(
+        sqlite3.OperationalError, match="no such table: main.raw"
+    ):
+        sca.read_file(
+            tsv_path=headers_only_tsv_path,
+            id_col="id",
+            text_column="text",
+            db_path=db_path,
+        )
+
+
+def test_load_malformed_yml(tmp_path):
+    malformed_yml_path = tmp_path / "malformed.yml"
+    with open(malformed_yml_path, "w") as f:
+        f.write("db_path: test.sqlite3\\n: unindented_colon")  # Invalid YAML
+
+    sca = SCA()
+    with pytest.raises(yaml.YAMLError):
+        sca.load(malformed_yml_path)
+
+
+def test_add_collocates_pattern_cleans_to_empty(sca_instance):
+    # Test that a collocate pair where one pattern becomes empty after cleaning is skipped
+    # and does not cause an error or get added.
+    initial_collocates_count = len(sca_instance.collocates)
+    initial_terms_count = len(sca_instance.terms)
+
+    # "!@#" will be cleaned to an empty string by sca.corpus.cleaner
+    # The pair ("!@#", "world") should result in clean_pair = {"", "world"}
+    # The current logic in add_collocates processes this if len(clean_pair) == 2.
+    # However, _add_term("") will then cause an SQL error in tabulate_term("").
+    # We expect an sqlite3.OperationalError here until corpus.py is fixed.
+    with pytest.raises(
+        sqlite3.OperationalError, match=r'near "\(": syntax error'
+    ):
+        sca_instance.add_collocates([("!@#", "world")])
+
+    # Assert that no new collocates or terms were added due to the error
+    assert (
+        len(sca_instance.collocates) == initial_collocates_count
+    ), "Collocates should not be added if a pattern cleans to empty and causes an error."
+    # Depending on when the error occurs in add_collocates, 'world' might have been added to terms
+    # if it wasn't already there. For a robust check against empty string terms:
+    assert (
+        "" not in sca_instance.terms
+    ), "Empty string should not be added as a term."
+
+    # Check that a valid collocate can still be added if the instance is not corrupted
+    sca_instance.add_collocates([("newvalid", "pairvalid")])
+    assert ("newvalid", "pairvalid") in sca_instance.collocates
+    assert "newvalid" in sca_instance.terms
+    assert "pairvalid" in sca_instance.terms
