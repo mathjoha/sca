@@ -5,6 +5,73 @@
 
 This is a python + sqlite implementation of the method _Structural Collocation Analysis_ as described in [this paper]{https://doi.org/10.1080/01615440.2024.2414259}
 
+## Installation & Usage
+
+### User Installation
+
+You can install the package directly from GitHub using pip:
+
+```bash
+pip install git+https://github.com/matjoha/sca.git
+```
+
+### Developer Setup
+
+If you want to contribute to the development of SCA, follow these steps:
+
+1. Clone the repository:
+```bash
+git clone https://github.com/matjoha/sca.git
+cd sca
+```
+
+2. Create and activate a virtual environment:
+```bash
+python -m venv .venv
+source .venv/bin/activate  # On Windows use: .venv\Scripts\activate
+```
+
+3. Install the package in editable mode with development dependencies:
+```bash
+pip install -e ".[dev]"
+```
+
+4. Install pre-commit hooks:
+```bash
+pip install pre-commit
+pre-commit install
+pre-commit install --hook-type pre-push
+```
+
+
+### Running Tests
+
+The project uses pytest for testing and maintains 100% code coverage. To run the tests:
+
+```bash
+pytest
+```
+
+To run tests with coverage report:
+```bash
+pytest --cov=src/sca tests/
+```
+
+To run tests across different Python versions using tox:
+```bash
+tox
+```
+
+### Code Quality
+
+The project enforces code quality through:
+- Black for code formatting
+- isort for import sorting
+- pytest for testing
+- 100% test coverage requirement
+
+These checks are automatically run through pre-commit hooks and CI/CD pipelines.
+
 ## Citing SCA
 
 If you use Structural Collocation Analysis in your research, please cite the
