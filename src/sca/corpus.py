@@ -12,6 +12,11 @@ from nltk.corpus import stopwords
 from tqdm.auto import tqdm
 from yaml import safe_dump, safe_load
 
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
+
 sw = set(stopwords.words("english"))
 sw |= {
     "hon",
@@ -145,16 +150,32 @@ class SCA:
             db_path: Path to the SQLite database file.
         """
         self.db_path = Path(db_path)
+        logger.info(f"Set db_path to {self.db_path}")
 
         self.yaml_path = self.db_path.with_suffix(".yml")
+        logger.info(f"Set yaml_path to {self.yaml_path}")
 
         self.id_col = id_col
         self.text_column = text_column
+        logger.info(
+            f"Set id_col to '{self.id_col}' and text_column to '{self.text_column}'"
+        )
 
         if not self.db_path.exists():
+            logger.info(
+                f"Database file {self.db_path} does not exist. Seeding database."
+            )
             self.seed_db(tsv_path)
+        else:
+            logger.info(
+                f"Database file {self.db_path} already exists. Skipping seed."
+            )
+            raise FileExistsError(
+                f"Trying to seed to an existing database file: {self.db_path}"
+            )
 
         self.conn = sqlite3.connect(db_path)
+        logger.info(f"Connected to database: {db_path}")
         self.terms = set(
             _[0]
             for _ in self.conn.execute(
@@ -165,10 +186,14 @@ class SCA:
                 """
             ).fetchall()
         )
+        logger.info(f"Loaded {len(self.terms)} terms from the database.")
         self.collocates = set(
             self.conn.execute(
                 "select distinct pattern1, pattern2 from collocate_window"
             ).fetchall()
+        )
+        logger.info(
+            f"Loaded {len(self.collocates)} collocate pairs from collocate_window table."
         )
         atexit.register(self.save)
 
@@ -195,6 +220,7 @@ class SCA:
         The YAML file is saved with the same name as the database file but
         with a .yml extension.
         """
+        logger.info(f"Saving SCA settings to {self.yaml_path}")
         settings = self.settings_dict()
         settings["collocates"] = list(settings["collocates"])
         settings["id_col"] = self.id_col
@@ -202,6 +228,7 @@ class SCA:
         settings["columns"] = sorted(list(self.columns))
         with open(self.yaml_path, "w", encoding="utf8") as f:
             safe_dump(data=settings, stream=f)
+        logger.info(f"Successfully saved SCA settings to {self.yaml_path}")
 
     def load(self, settings_path: str | Path):
         """Loads SCA settings from a YAML configuration file.
@@ -210,19 +237,32 @@ class SCA:
             settings_path: Path to the YAML configuration file.
         """
         self.yaml_path = Path(settings_path)
+        logger.info(f"Loading SCA settings from {self.yaml_path}")
         with open(settings_path, "r", encoding="utf8") as f:
             settings = safe_load(f)
+        logger.info(f"Successfully loaded settings from {self.yaml_path}")
 
         self.db_path = Path(settings_path).parent / Path(settings["db_path"])
+        logger.info(f"Set db_path to {self.db_path} from settings file.")
         self.collocates = set(
             tuple(collocate) for collocate in settings["collocates"]
         )
+        logger.info(
+            f"Loaded {len(self.collocates)} collocate pairs from settings."
+        )
         self.id_col = settings["id_col"]
         self.text_column = settings["text_column"]
+        logger.info(
+            f"Set id_col to '{self.id_col}' and text_column to '{self.text_column}' from settings."
+        )
         self.columns = sorted(settings["columns"])
+        logger.info(
+            f"Loaded {len(self.columns)} data columns from settings: {self.columns}"
+        )
         self.set_data_cols()
 
         self.conn = sqlite3.connect(self.db_path)
+        logger.info(f"Connected to database: {self.db_path}")
         self.terms = set(
             _[0]
             for _ in self.conn.execute(
@@ -233,6 +273,7 @@ class SCA:
                 """
             ).fetchall()
         )
+        logger.info(f"Loaded {len(self.terms)} terms from the database.")
 
     def set_data_cols(self):
         """Sets the data_cols attribute as a comma-separated string of columns.
@@ -270,6 +311,7 @@ class SCA:
         self.terms |= {
             term,
         }
+        logger.info(f"Added term: {term}. Total terms: {len(self.terms)}")
 
     def seed_db(self, source_path):
         """Seeds the SQLite database from a source CSV or TSV file.
@@ -287,32 +329,46 @@ class SCA:
             AttributeError: If id_col or text_column are not found in the input file.
         """
 
+        logger.info(f"Starting to seed database from {source_path}")
         if self.text_column == self.id_col:
+            logger.error("text_column and id_col cannot be the same.")
             raise ValueError("text_column and id_col cannot be the same")
 
         db = sqlite_utils.Database(self.db_path)
+        logger.info(f"Initialized database object for {self.db_path}")
 
         if source_path.suffix.lower() == ".tsv":
             sep = "\t"
+            logger.info(f"Detected TSV file: {source_path}")
         else:
             sep = ","
+            logger.info(f"Assuming CSV file: {source_path}")
 
         data = pd.read_csv(source_path, sep=sep)
+        logger.info(f"Read {len(data)} rows from {source_path}")
 
         if data.empty:
+            logger.error(f"Input file {source_path} is empty.")
             raise ValueError(f"Input file {source_path} is empty.")
 
         if self.id_col not in data.columns:
+            logger.error(f"Column {self.id_col} not found in {source_path}")
             raise AttributeError(
                 f"Column {self.id_col} not found in {source_path}",
             )
         if self.text_column not in data.columns:
+            logger.error(
+                f"Column {self.text_column} not found in {source_path}"
+            )
             raise AttributeError(
                 f"Column {self.text_column} not found in {source_path}"
             )
 
         for column_name in data.columns:
             if not sqlite3_friendly(column_name):
+                logger.error(
+                    f"Column name {column_name} is not SQLite-friendly."
+                )
                 raise ValueError(
                     f"Column name {column_name} is not SQLite-friendly."
                 )
@@ -324,8 +380,10 @@ class SCA:
                 self.text_column,
             }
         )
+        logger.info(f"Set data columns: {self.columns}")
 
         if len(self.columns) != (len(data.columns) - 2):
+            logger.error(f"Duplicate column names found: {self.columns}")
             raise ValueError(
                 "Duplicate column names found." + ", ".join(self.columns)
             )
@@ -333,8 +391,10 @@ class SCA:
         self.set_data_cols()
 
         db["raw"].insert_all(data.to_dict(orient="records"))
+        logger.info(f"Inserted {len(data)} records into 'raw' table.")
 
         db["raw"].create_index([self.id_col], unique=True)
+        logger.info(f"Created unique index on '{self.id_col}' in 'raw' table.")
 
         db["collocate_window"].create(
             {
@@ -344,6 +404,8 @@ class SCA:
                 "window": int,
             }
         )
+        logger.info("Created 'collocate_window' table.")
+        logger.info(f"Finished seeding database from {source_path}")
 
     def get_positions(self, tokens, count_stopwords=False, *patterns):
         """Finds all occurrences of patterns in a list of tokens.
@@ -389,6 +451,9 @@ class SCA:
         if (cleaned_pattern,) not in self.conn.execute(
             "select tbl_name from sqlite_master"
         ).fetchall():
+            logger.info(
+                f"Table for term '{cleaned_pattern}' does not exist. Creating and populating."
+            )
             self.conn.execute(
                 f"create table {cleaned_pattern} (text_fk)",
                 data,
@@ -401,7 +466,13 @@ class SCA:
                 data,
             )
             self.conn.commit()
+            logger.info(
+                f"Successfully created and populated table for term '{cleaned_pattern}'."
+            )
         else:
+            logger.info(
+                f"Table for term '{cleaned_pattern}' already exists. Skipping calculation."
+            )
             print(cleaned_pattern, "not calculated")
 
     def mark_windows(self, pattern1, pattern2, count_stopwords=False):
@@ -419,14 +490,21 @@ class SCA:
                              are ignored.
         """
         pattern1, pattern2 = sorted((pattern1, pattern2))
+        logger.info(
+            f"Marking windows for patterns: '{pattern1}' and '{pattern2}'. count_stopwords={count_stopwords}"
+        )
 
         clean1 = cleaner(pattern1)
         clean2 = cleaner(pattern2)
+        logger.info(f"Cleaned patterns: '{clean1}' and '{clean2}'.")
 
         self.tabulate_term(clean1)
         self.tabulate_term(clean2)
 
         data = []
+        logger.info(
+            f"Querying texts containing both '{clean1}' and '{clean2}'."
+        )
         for speech_id, text in tqdm(
             self.conn.execute(
                 f"""
@@ -471,6 +549,13 @@ class SCA:
         if len(data) == 0:
             # For tracking that no collocates were found
             data.append((None, pattern1, pattern2, None))
+            logger.info(
+                f"No occurrences found for '{pattern1}' - '{pattern2}'. Storing placeholder."
+            )
+        else:
+            logger.info(
+                f"Found {len(data)} instances for '{pattern1}' - '{pattern2}'."
+            )
 
         self.conn.executemany(
             f"""
@@ -480,6 +565,9 @@ class SCA:
             data,
         )
         self.conn.commit()
+        logger.info(
+            f"Stored window information for '{pattern1}' - '{pattern2}' in 'collocate_window' table."
+        )
 
     def collocate_to_condition(self, pattern1, pattern2, window):
         """Generates an SQL condition string for a collocate pair and window size.
@@ -509,6 +597,7 @@ class SCA:
             collocates: An iterable of collocate pairs (tuples of two pattern
                         strings). e.g. [("patternA", "patternB"), ...]
         """
+        logger.info(f"Adding {len(collocates)} collocate pairs.")
         prepared_collocates = set()
         clean_terms = set()
         for collocate in collocates:
@@ -529,13 +618,37 @@ class SCA:
             prepared_collocates |= {
                 tuple(sorted(collocate)),
             }
+        logger.info(
+            f"Prepared {len(prepared_collocates)} new collocate pairs for processing."
+        )
+        logger.info(
+            f"Identified {len(clean_terms)} unique clean terms from new collocates."
+        )
 
-        for term in clean_terms - self.terms:
-            self._add_term(term)
+        new_terms_to_add = clean_terms - self.terms
+        if new_terms_to_add:
+            logger.info(
+                f"Adding {len(new_terms_to_add)} new terms to the database: {new_terms_to_add}"
+            )
+            for term in new_terms_to_add:
+                self._add_term(term)
+        else:
+            logger.info("No new terms to add from the provided collocates.")
 
-        for collocate in prepared_collocates:
-            self.mark_windows(*collocate)
-        self.collocates |= prepared_collocates
+        if prepared_collocates:
+            logger.info(
+                f"Marking windows for {len(prepared_collocates)} new collocate pairs."
+            )
+            for collocate in prepared_collocates:
+                self.mark_windows(*collocate)
+            self.collocates |= prepared_collocates
+            logger.info(
+                f"Successfully added {len(prepared_collocates)} new collocate pairs. Total collocates: {len(self.collocates)}."
+            )
+        else:
+            logger.info(
+                "No new collocate pairs to add (either duplicates or invalid). "
+            )
 
     def collocate_to_speech_query(self, collocates):
         """Generates an SQL subquery to select distinct text IDs based on collocates.
@@ -595,7 +708,16 @@ class SCA:
                         used for filtering.
             out_file: Path to the output TSV file where results will be saved.
         """
+        logger.info(
+            f"Calculating counts by subgroups. Output file: {out_file}"
+        )
+        logger.info(
+            f"Using {len(collocates)} collocate specifications for filtering."
+        )
         # todo: test pre-calculating the baseline
+        logger.info(
+            f"Calculating baseline counts from 'raw' table, grouping by {self.data_cols}."
+        )
         df_baseline = pd.read_sql_query(
             f"""
             select {self.data_cols}, count(rowid) as total
@@ -604,9 +726,14 @@ class SCA:
             """,
             self.conn,
         ).fillna("N/A")
+        logger.info(
+            f"Baseline calculation complete. Found {len(df_baseline)} baseline groups."
+        )
 
         id_query = self.collocate_to_speech_query(collocates)
+        logger.info("Generated ID query for collocates.")
 
+        logger.info("Calculating collocate-filtered counts.")
         df_collocates = pd.read_sql_query(
             f"""
             select parliament, party, party_in_power, district_class,
@@ -618,7 +745,11 @@ class SCA:
             """,
             self.conn,
         )
+        logger.info(
+            f"Collocate-filtered count calculation complete. Found {len(df_collocates)} groups."
+        )
 
+        logger.info("Merging baseline and collocate-filtered counts.")
         df_all = df_baseline.merge(
             df_collocates,
             on=[
@@ -630,10 +761,12 @@ class SCA:
             ],
             how="outer",
         ).fillna(0)
+        logger.info("Merge complete.")
 
         df_all["collocate_count"] = df_all["collocate_count"].apply(int)
 
         df_all.to_csv(out_file, sep="\t", encoding="utf8", index=False)
+        logger.info(f"Successfully saved counts by subgroups to {out_file}")
 
     # add function for tabulation of the results ...
     ## headers = [d[0] for d in cursor.description]
@@ -664,6 +797,12 @@ class SCA:
                         specification is a tuple (pattern1, pattern2, window).
         """
         table_name = "group_" + collocate_name.strip().replace(" ", "_")
+        logger.info(
+            f"Creating collocate group: '{collocate_name}'. Table name: '{table_name}'."
+        )
+        logger.info(
+            f"Using {len(collocates)} collocate specifications for this group."
+        )
 
         self.conn.execute(
             """create table if not exists named_collocate (
@@ -673,6 +812,7 @@ class SCA:
             term2 text,
             window integer)"""
         )
+        logger.info("Ensured 'named_collocate' table exists.")
 
         self.conn.executemany(
             f"""
@@ -682,6 +822,9 @@ class SCA:
             """,
             collocates,
         )
+        logger.info(
+            f"Inserted {len(collocates)} specifications into 'named_collocate' for group '{collocate_name}'."
+        )
 
         self.conn.execute(
             f"""
@@ -689,12 +832,19 @@ class SCA:
             sw, conterm, collocate_begin, collocate_end)
             """
         )
+        logger.info(
+            f"Created table '{table_name}' for collocate group details."
+        )
 
         id_query = self.collocate_to_speech_query(collocates)
+        logger.info("Generated ID query for collocates in this group.")
 
         collocate_patterns = {
             pattern for collocate in collocates for pattern in collocate[:2]
         }
+        logger.info(
+            f"Identified {len(collocate_patterns)} unique patterns for this group: {collocate_patterns}"
+        )
 
         pattern_to_targets = defaultdict(set)
         for pattern1, pattern2, window in collocates:
@@ -705,6 +855,12 @@ class SCA:
                 (pattern1, window),
             }
 
+        logger.info(
+            f"Processing texts for collocate group '{collocate_name}'."
+        )
+        speech_data_to_insert = (
+            []
+        )  # Renamed to avoid conflict with inner scope variable
         for text_fk, text in self.conn.execute(
             f"""
             select {self.id_col}, {self.text_column} from raw
@@ -712,7 +868,7 @@ class SCA:
             """
         ):
             sw_pos_adjust = 0
-            speech_data = []
+            current_speech_tokens = []  # Renamed to avoid conflict
             for pos, raw_token in enumerate(tokenizer(text)):
                 token = cleaner(raw_token)
 
@@ -727,13 +883,13 @@ class SCA:
                 else:
                     sw_pos = pos - sw_pos_adjust
                     conterm = None
-                    collocates = [
+                    collocates_match = [  # Renamed, was `collocates` which is a parameter name
                         pattern
                         for pattern in collocate_patterns
                         if fnmatch(token, pattern)
                     ]
 
-                speech_data.append(
+                current_speech_tokens.append(
                     [
                         text_fk,
                         pos,
@@ -745,21 +901,33 @@ class SCA:
                     ]
                 )
 
-            for i, (_, _, pos_sw, _, token, is_sw, _) in enumerate(
-                speech_data
-            ):
-                if is_sw:
-                    speech_data[i][-3:] = [False, None, None]
-
+            for i, token_data in enumerate(current_speech_tokens):
+                if token_data[5]:  # is_sw
+                    current_speech_tokens[i] = token_data[:6] + [
+                        False,
+                        None,
+                        None,
+                    ]
                 else:
-                    pass
+                    current_speech_tokens[i] = token_data[:6] + [
+                        False,
+                        None,
+                        None,
+                    ]
+            speech_data_to_insert.extend(current_speech_tokens)
 
+        logger.info(
+            f"Inserting {len(speech_data_to_insert)} token entries into '{table_name}'."
+        )
         self.conn.executemany(
             f"""
             insert into {table_name} (text_fk, raw_text, token,
             sw, conterm, collocate_begin, collocate_end)
             values (?, ?, ?, ?, ?, ?, ?)
             """,
-            speech_data,
+            [
+                item[:7] for item in speech_data_to_insert
+            ],  # Taking first 7 items to match insert statement
         )
         self.conn.commit()
+        logger.info(f"Successfully inserted token data into '{table_name}'.")
