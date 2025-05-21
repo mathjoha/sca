@@ -860,9 +860,7 @@ class SCA:
         logger.info(
             f"Processing texts for collocate group '{collocate_name}'."
         )
-        speech_data_to_insert = (
-            []
-        )  # Renamed to avoid conflict with inner scope variable
+        speech_data_to_insert = []
         for text_fk, text in self.conn.execute(
             f"""
             select {self.id_col}, {self.text_column} from raw
@@ -870,7 +868,7 @@ class SCA:
             """
         ):
             sw_pos_adjust = 0
-            current_speech_tokens = []  # Renamed to avoid conflict
+            current_speech_tokens = []
             for pos, raw_token in enumerate(tokenizer(text)):
                 token = cleaner(raw_token)
 
@@ -885,7 +883,7 @@ class SCA:
                 else:
                     sw_pos = pos - sw_pos_adjust
                     conterm = None
-                    collocates_match = [  # Renamed, was `collocates` which is a parameter name
+                    collocates_match = [
                         pattern
                         for pattern in collocate_patterns
                         if fnmatch(token, pattern)
@@ -904,7 +902,7 @@ class SCA:
                 )
 
             for i, token_data in enumerate(current_speech_tokens):
-                if token_data[5]:  # is_sw
+                if token_data[5]:
                     current_speech_tokens[i] = token_data[:6] + [
                         False,
                         None,
@@ -927,9 +925,7 @@ class SCA:
             sw, conterm, collocate_begin, collocate_end)
             values (?, ?, ?, ?, ?, ?, ?)
             """,
-            [
-                item[:7] for item in speech_data_to_insert
-            ],  # Taking first 7 items to match insert statement
+            [item[:7] for item in speech_data_to_insert],
         )
         self.conn.commit()
         logger.info(f"Successfully inserted token data into '{table_name}'.")
