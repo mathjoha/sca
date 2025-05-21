@@ -189,7 +189,10 @@ class SCA:
                 f"create table {cleaned_pattern} (speech_fk)", data
             )
             self.conn.execute(
-                f'insert into {cleaned_pattern} select {self.id_col} from raw where speech_text like "%" || :table || "%"',
+                f"""
+                insert into {cleaned_pattern} select {self.id_col} from
+                raw where {self.text_column} like "%" || :table || "%"
+                """,
                 data,
             )
             self.conn.commit()
