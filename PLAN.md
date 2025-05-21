@@ -6,9 +6,9 @@ Currently, the SCA database allows duplicate rows in tables other than the 'raw'
 ## Implementation Steps
 
 ### 1. Red Phase: Add Tests for Uniqueness
-1. Create test file `tests/test_uniqueness.py`
-   - Test duplicate prevention in `collocate_window` table
-   - Test duplicate prevention in term tables
+1. Create test file `tests/test_uniqueness.py` ✅
+   - Test duplicate prevention in `collocate_window` table ✅
+   - Test duplicate prevention in term tables ✅
    - Test duplicate prevention in `named_collocate` table
    - Test duplicate prevention in collocate group tables
 
