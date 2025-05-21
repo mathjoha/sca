@@ -286,3 +286,23 @@ def test_compare_different(tmp_path: Path):
     )
 
     assert corpus_1 != corpus_2
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="Red Phase: (Found the need for this when adding logging.)",
+)
+def test_seed_existing_db(tmp_path: Path):
+    db_path = tmp_path / "small_csv.sqlite3"
+
+    db_path.touch()
+
+    with pytest.raises(
+        FileExistsError, match="Trying to seed to an existing database file:"
+    ):
+        from_file(
+            tsv_path=db_path,
+            id_col="id",
+            text_column="text",
+            db_path=db_path,
+        )
