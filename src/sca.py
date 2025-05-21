@@ -344,12 +344,10 @@ class SCA:
     def counts_by_subgroups(self, collocates, out_file):
         # todo: test pre-calculating the baseline
         df_baseline = pd.read_sql_query(
-            """
-            select parliament, party, party_in_power, district_class,
-            seniority, count(rowid) as total
+            f"""
+            select {self.data_cols}, count(rowid) as total
             from raw
-            group by parliament, party, party_in_power,
-            district_class, seniority
+            group by {self.data_cols}
             """,
             self.conn,
         ).fillna("N/A")
