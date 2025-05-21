@@ -88,7 +88,11 @@ class SCA:
         self.terms = set(
             _[0]
             for _ in self.conn.execute(
-                'select name from sqlite_master where type == "table" and instr(name, "_") == 0'
+                """
+                select name from sqlite_master
+                where type == "table"
+                and instr(name, "_") == 0
+                """
             ).fetchall()
         )
         self.collocates = set(
@@ -102,7 +106,7 @@ class SCA:
         settings = {
             "db_path": str(
                 self.db_path.resolve().relative_to(
-                    self.yaml_path.resolve().parent
+                    self.yaml_path.resolve().parent,
                 )
             ),
             # Source file w/ hash?
@@ -146,7 +150,7 @@ class SCA:
 
         if self.id_col not in data.columns:
             raise AttributeError(
-                f"Column {self.id_col} not found in {source_path}"
+                f"Column {self.id_col} not found in {source_path}",
             )
         if self.text_column not in data.columns:
             raise AttributeError(
@@ -186,7 +190,8 @@ class SCA:
             "select tbl_name from sqlite_master"
         ).fetchall():
             self.conn.execute(
-                f"create table {cleaned_pattern} (speech_fk)", data
+                f"create table {cleaned_pattern} (speech_fk)",
+                data,
             )
             self.conn.execute(
                 f"""
@@ -377,7 +382,8 @@ class SCA:
 
         self.conn.execute(
             f"""
-            insert into named_collocate (name, table_name, term1, term2, window)
+            insert into named_collocate (name, table_name, term1,
+              term2, window)
             values ({name}, {table_name}, ?, ?, ?)
             """,
             collocates,
