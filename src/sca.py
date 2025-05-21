@@ -140,7 +140,7 @@ class SCA:
         with open(source_path, "rb") as f:
             rows, _ = sqlite_utils.utils.rows_from_file(
                 f,
-                dialect="tsv",
+                dialect=source_path.suffix,
                 encoding="utf8",
                 format=sqlite_utils.utils.Format.TSV,
             )
