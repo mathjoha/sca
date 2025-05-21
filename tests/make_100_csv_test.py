@@ -1,4 +1,3 @@
-import sqlite3
 from pathlib import Path
 from tempfile import mkdtemp
 
@@ -21,8 +20,12 @@ def temp_dir():
 
 
 @pytest.fixture(scope="module")
-def sca_filled(temp_dir, tsv_file):
-    db_path = temp_dir / "sca.sqlite3"
+def db_path(temp_dir):
+    return temp_dir / "sca.sqlite3"
+
+
+@pytest.fixture(scope="module")
+def sca_filled(db_path, tsv_file):
     corpus = sca.from_file(
         db_path=db_path,
         tsv_path=tsv_file,
@@ -102,9 +105,14 @@ def test_collocate_lenw10(speeches_with_collocates):
     assert len([w for *_, w in speeches_with_collocates if w <= 10]) == 9
 
 
-def test_name_id_col():
-    corpus = SCA(db_path=db_path, tsv_path=tsv_file, id_col="id_col_name")
-    assert corpus.id_col == "id_col_name"
+def test_set_name_id_col(db_path, tsv_file):
+    with pytest.raises(AttributeError, match="Column id_col_name not found"):
+        sca.from_file(
+            db_path=db_path.parent / "not_sca.sqlite3",
+            tsv_path=tsv_file,
+            id_col="id_col_name",
+            text_column="speech_text",
+        )
 
 
 def test_name_id_col(sca_filled):

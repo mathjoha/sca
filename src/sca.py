@@ -1,6 +1,5 @@
 import atexit
 import logging
-import os
 import re
 import sqlite3
 from collections import defaultdict
