@@ -209,8 +209,8 @@ class SCA:
             )
             self.seed_db(tsv_path)
         else:
-            logger.info(
-                f"Database file {self.db_path} already exists. Skipping seed."
+            logger.warning(
+                f"Database file {self.db_path} already exists. Seeding will be aborted as it's only allowed for a non-existent database."
             )
             raise FileExistsError(
                 f"Database file '{self.db_path}' already exists. Seeding is only allowed to a non-existent database. If you intend to re-seed, please provide a new database path or delete the existing file '{self.db_path}'."
@@ -588,10 +588,10 @@ class SCA:
                 f"Successfully created and populated table for term '{cleaned_pattern}'."
             )
         else:
-            logger.info(
-                f"Table for term '{cleaned_pattern}' already exists. Skipping calculation."
+            logger.info(f"Table for term '{cleaned_pattern}' already exists.")
+            logger.debug(
+                f"Skipping calculation for already tabulated term '{cleaned_pattern}'."
             )
-            print(cleaned_pattern, "not calculated")
 
     def mark_windows(self, pattern1, pattern2, count_stopwords=False):
         """Calculates and stores the minimum window between two patterns in texts.
@@ -743,14 +743,16 @@ class SCA:
                 tuple(sorted(collocate)),
             }
         if not prepared_collocates:
-            logger.info(f"No collocates to add from {collocates=}")
+            logger.warning(
+                f"No valid collocates to add from input: {collocates=}"
+            )
             raise ValueError("No clean collocates to add.")
         elif (
             len(prepared_collocates) != len(collocates)
             and not allow_duplicates
         ):
-            logger.info(
-                f"Aborting: Could not add all collocates {collocates=}. "
+            logger.warning(
+                f"Could not add all provided collocates due to duplicates or invalid pairs (and allow_duplicates=False). Original: {collocates=}. "
                 f"Only {prepared_collocates=} could have been added."
             )
             raise ValueError(f"Aborting: Could not add ALL collocates.")

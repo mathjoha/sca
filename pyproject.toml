@@ -1,4 +1,12 @@
 [project]
+name ="sca"
+dynamic = ["version"]
+description="An implementation of Structural Collocation Analysis (https://doi.org/10.1080/01615440.2024.2414259)"
+readme = "README.md"
+requires-python = ">= 3.8"
+license = {"file"= "LICENSE"}
+keywords = ["linguistics", "collocation", "corpus analysis"] # Add relevant keywords
+
 dependencies =[
   "tqdm",
   "pandas",
@@ -7,9 +15,7 @@ dependencies =[
   "PyYAML==6.0.2",
   "sqlite-utils"
 ]
-name ="sca"
-dynamic = ["version"]
-requires-python = ">= 3.8"
+
 authors = [
   {name = "Mathias Johansson", email = "MathiasJoha@gmail.com"},
   {name = "Betto van Waarden"}
@@ -17,9 +23,17 @@ authors = [
 maintainers = [
   {name="Mathias Johansson", email="MathiasJoha@gmail.com"}
 ]
-readme = "README.md"
-description="An implementation of Structural Collocation Analysis (https://doi.org/10.1080/01615440.2024.2414259)"
-license = {"file"= "LICENSE"}
+
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Topic :: Text Processing :: Linguistic",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/mathjoha/sca"
+"Bug Tracker" = "https://github.com/mathjoha/sca/issues"
 
 [tool.isort]
 profile = "black"
