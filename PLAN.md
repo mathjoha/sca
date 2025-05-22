@@ -39,7 +39,7 @@
 
 ## 4. Update Existing Functionality
 1. Update stopwords-dependent methods
-    - Happy path test: Test existing functionality with new stopwords system
+    - Happy path test: Test existing functionality with new stopwords system ✅
 
     - Implement feature:
         - Update get_positions to use instance stopwords
