@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: hatch
-      url: https://pypi.org/p/sca
+      url: https://pypi.org/p/scolan
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
