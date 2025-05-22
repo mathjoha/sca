@@ -11,7 +11,7 @@
     - Happy path test: Test existing functionality with new stopwords system ✅
 
     - Implement feature:
-        - Update get_positions to use instance stopwords
+        - Update get_positions to use instance stopwords ✅
         - Update mark_windows to use instance stopwords
         - Update create_collocate_group to use instance stopwords
         - Changing stopwords resets the stopwords-dependent calculations
