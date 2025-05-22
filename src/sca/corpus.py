@@ -123,6 +123,13 @@ class SCA:
     db_path = Path("sca.sqlite3")
 
     def __init__(self, language="english"):
+        self.set_language(language)
+        self.collocates = set()
+        logger.info(
+            f"Initialized SCA with language '{language}' and {len(self.stopwords)} stopwords"
+        )
+
+    def set_language(self, language):
         if language is None:
             self.language = None
             self.stopwords = set()
@@ -132,11 +139,6 @@ class SCA:
             self.language = language
             self.stopwords = set(stopwords.words(language))
         self.custom_stopwords = set()
-
-        self.collocates = set()
-        logger.info(
-            f"Initialized SCA with language '{language}' and {len(self.stopwords)} stopwords"
-        )
 
     def load_stopwords_from_file(self, file_path: str | Path):
         """Load custom stopwords from a text file.
@@ -279,7 +281,10 @@ class SCA:
         Raises:
             ValueError: If the language configuration is invalid
         """
-        if not self.language or self.language not in stopwords.fileids():
+        if (
+            self.language is not None
+            and self.language not in stopwords.fileids()
+        ):
             raise ValueError("Invalid language configuration")
 
         logger.info(f"Saving SCA settings to {self.yaml_path}")
@@ -309,13 +314,8 @@ class SCA:
             settings = safe_load(f)
         logger.info(f"Successfully loaded settings from {self.yaml_path}")
 
-        self.language = settings["language"]
+        self.set_language(settings["language"])
 
-        if not self.language in stopwords.fileids():
-            raise ValueError(f"Invalid language code '{self.language}'")
-
-        # Initialize base stopwords from language
-        self.stopwords = set(stopwords.words(self.language))
         logger.info(
             f"Loaded language '{self.language}' with {len(self.stopwords)} stopwords"
         )
