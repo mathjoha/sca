@@ -68,31 +68,26 @@ def test_columns(sca_filled: sca.SCA):
     ]
 
 
-@pytest.mark.xfail(strict=True, reason="Not converted to pseudo data")
 def test_collocate_len(speeches_with_collocates: list[tuple[str, str, int]]):
-    assert len(speeches_with_collocates) == 20
+    assert len(speeches_with_collocates) == 1
 
 
-@pytest.mark.xfail(strict=True, reason="Not converted to pseudo data")
 def test_collocate_min(speeches_with_collocates: list[tuple[str, str, int]]):
-    assert min(w for *_, w in speeches_with_collocates) == 1
+    assert min(w for *_, w in speeches_with_collocates) == 4
 
 
-@pytest.mark.xfail(strict=True, reason="Not converted to pseudo data")
 def test_collocate_max(speeches_with_collocates: list[tuple[str, str, int]]):
-    assert max(w for *_, w in speeches_with_collocates) == 82
+    assert max(w for *_, w in speeches_with_collocates) == 4
 
 
-@pytest.mark.xfail(strict=True, reason="Not converted to pseudo data")
 def test_collocate_sum(speeches_with_collocates: list[tuple[str, str, int]]):
-    assert sum(w for *_, w in speeches_with_collocates) == 384
+    assert sum(w for *_, w in speeches_with_collocates) == 4
 
 
-@pytest.mark.xfail(strict=True, reason="Not converted to pseudo data")
 def test_collocate_lenw10(
     speeches_with_collocates: list[tuple[str, str, int]]
 ):
-    assert len([w for *_, w in speeches_with_collocates if w <= 10]) == 9
+    assert len([w for *_, w in speeches_with_collocates if w <= 10]) == 1
 
 
 def test_set_name_id_col(db_path, tsv_file: Path):
@@ -104,7 +99,7 @@ def test_set_name_id_col(db_path, tsv_file: Path):
             db_path=db_path.parent / "not_sca.sqlite3",
             tsv_path=tsv_file,
             id_col="id_col_name",
-            text_column="speech_text",
+            text_column="Content",
         )
 
 
@@ -121,9 +116,8 @@ def test_set_name_text_column(db_path, tsv_file: Path):
         )
 
 
-@pytest.mark.xfail(strict=True, reason="Not converted to pseudo data")
 def test_name_id_col(sca_filled: sca.SCA):
-    assert sca_filled.id_col == "speech_id"
+    assert sca_filled.id_col == "id"
 
 
 class TestSavedSettings:
