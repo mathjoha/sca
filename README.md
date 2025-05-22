@@ -16,7 +16,11 @@ and used in
 You can install the package directly from GitHub using pip:
 
 ```bash
-pip install git+https://github.com/matjoha/sca.git
+python -m pip install git+https://github.com/matjoha/sca.git
+```
+
+```bash
+python -m pip install scolan
 ```
 
 ### Developer Setup
