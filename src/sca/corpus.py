@@ -517,7 +517,7 @@ class SCA:
         pos_dict = defaultdict(list)
         stops = 0
         for i, token in enumerate(tokens):
-            if token.lower() in self.stopwords:
+            if token.lower() in self.stopwords and not count_stopwords:
                 stops += 1
             else:
                 for pattern in patterns:
