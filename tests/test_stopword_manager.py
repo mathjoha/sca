@@ -70,7 +70,7 @@ def test_invalid_stopwords_modification():
         corpus.add_stopwords("not_a_set")
 
     with pytest.raises(TypeError, match="Stopwords must be provided as a set"):
-        corpus.remove_stopwords("not_a_set")
+        corpus.remove_stopwords(None)
 
 
 def test_stopwords_persistence(tmp_path):
@@ -124,3 +124,15 @@ def test_get_positions_with_custom_stopwords():
 
     positions_with_stopwords = corpus.get_positions(tokens, True, "word*")
     assert positions_with_stopwords["word*"] == [0, 2]
+
+
+def test_modify_stopwords():
+    corpus = SCA()
+    corpus.add_stopwords({"new1", "new2"})
+    assert "new1" in corpus.stopwords
+
+    corpus.remove_stopwords({"new1"})
+    assert "new1" not in corpus.stopwords
+
+    assert "new2" in corpus.stopwords
+    assert "new1" not in corpus.stopwords
