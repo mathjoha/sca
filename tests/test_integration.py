@@ -867,9 +867,7 @@ class TestSCAOperations:
         # if not str(pattern).isdigit() is the primary filter here.
 
         # Act
-        with pytest.raises(
-            ValueError, match="No clean collocates to add from"
-        ):
+        with pytest.raises(ValueError, match="No clean collocates to add."):
             sca.add_collocates([("numericterm", "123")])
 
         # Assert
@@ -889,15 +887,28 @@ class TestSCAOperations:
         count_after_first_add = len(sca.collocates)
 
         # Act: Add the same collocate again
-        with pytest.raises(
-            ValueError, match="No clean collocates to add from "
-        ):
+        with pytest.raises(ValueError, match="No clean collocates to add."):
             sca.add_collocates([collocate_pair])
 
         # Assert
         assert (
             len(sca.collocates) == count_after_first_add
         ), "Adding a duplicate collocate should not change the count"
+
+    def test_add_collocates_duplicate_collocate(self, sca_initial_data: SCA):
+        # Arrange
+        sca = sca_initial_data
+        collocate_pair = ("firstcall", "term")
+        with pytest.raises(
+            ValueError, match="Aborting: Could not add ALL collocates."
+        ):
+            sca.add_collocates([collocate_pair] * 2)
+        assert collocate_pair not in sca.collocates
+        sca.add_collocates([collocate_pair] * 2, allow_duplicates=True)
+        assert collocate_pair in sca.collocates
+
+        with pytest.raises(ValueError, match="No clean collocates to add."):
+            sca.add_collocates([collocate_pair] * 2)
 
     def test_mark_windows_handles_fnmatch_mismatch(self, tmp_path):
         # Arrange: text has "alpha" and "betaX", but we search for "beta"

@@ -758,17 +758,17 @@ class SCA:
                 tuple(sorted(collocate)),
             }
         if not prepared_collocates:
-            logger.info("No collocates to add.")
-            raise ValueError(f"No clean collocates to add from {collocates=}")
+            logger.info(f"No collocates to add from {collocates=}")
+            raise ValueError("No clean collocates to add.")
         elif (
             len(prepared_collocates) != len(collocates)
             and not allow_duplicates
         ):
             logger.info(
-                f"Could not add all collocates {collocates=}. "
+                f"Aborting: Could not add all collocates {collocates=}. "
                 f"Only {prepared_collocates=} could have been added."
             )
-            raise ValueError(f"Could not add all collocates, aborting.")
+            raise ValueError(f"Aborting: Could not add ALL collocates.")
 
         logger.info(
             f"Prepared {len(prepared_collocates)} new collocate pairs for processing."
@@ -787,23 +787,15 @@ class SCA:
         else:
             logger.info("No new terms to add from the provided collocates.")
 
-        if prepared_collocates:
-            logger.info(
-                f"Marking windows for {len(prepared_collocates)} new collocate pairs."
-            )
-            for collocate in prepared_collocates:
-                self.mark_windows(*collocate)
-            self.collocates |= prepared_collocates
-            logger.info(
-                f"Successfully added {len(prepared_collocates)} new collocate pairs. Total collocates: {len(self.collocates)}."
-            )
-        else:
-            logger.info(
-                "No new collocate pairs to add (either duplicates or invalid). "
-            )
-            raise ValueError(
-                "No new collocate pairs to add (either duplicates or invalid)."
-            )
+        logger.info(
+            f"Marking windows for {len(prepared_collocates)} new collocate pairs."
+        )
+        for collocate in prepared_collocates:
+            self.mark_windows(*collocate)
+        self.collocates |= prepared_collocates
+        logger.info(
+            f"Successfully added {len(prepared_collocates)} new collocate pairs. Total collocates: {len(self.collocates)}."
+        )
 
     def collocate_to_textID_query(self, collocates):
         """Generates an SQL subquery to select distinct text IDs based on collocates.
