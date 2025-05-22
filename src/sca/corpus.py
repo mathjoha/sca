@@ -719,11 +719,12 @@ class SCA:
         Returns:
             An SQL WHERE clause condition string.
         """
-        return f"""
-        (pattern1 == "{pattern1}"
-        and pattern2 == "{pattern2}"
-        and window <= {window})
-        """
+        return (
+            f"(pattern1 == '{pattern1}'"
+            f"and pattern2 == '{pattern2}'"
+            f"and window <= {window})"
+        )
+
 
     def add_collocates(self, collocates):
         """Adds new collocate pairs to the SCA object.
@@ -788,6 +789,7 @@ class SCA:
             logger.info(
                 "No new collocate pairs to add (either duplicates or invalid). "
             )
+            raise ValueError("No new collocate pairs to add (either duplicates or invalid).")
 
     def collocate_to_speech_query(self, collocates):
         """Generates an SQL subquery to select distinct text IDs based on collocates.
@@ -992,6 +994,9 @@ class SCA:
 
         id_query = self.collocate_to_speech_query(collocates)
         logger.info("Generated ID query for collocates in this group.")
+
+        if self.conn.execute(id_query[2:-2]).fetchone() is None:
+            self.add_collocates([c[:2] for c in collocates])
 
         collocate_patterns = {
             pattern for collocate in collocates for pattern in collocate[:2]

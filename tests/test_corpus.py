@@ -552,7 +552,6 @@ def test_stopwords_impact_on_mark_windows(minimal_corpus_for_collocation: SCA):
     assert windows_after_remove.get("text4") == 1
 
 
-@pytest.mark.xfail(strict=True, reason="Red Phase [Expand as necessary]")
 def test_stopwords_impact_on_create_collocate_group(
     minimal_corpus_for_collocation: SCA,
 ):
