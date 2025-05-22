@@ -514,7 +514,7 @@ class SCA:
             of integer positions where each pattern was found. Positions are
             0-indexed.
         """
-        pos_dict = {_: [] for _ in patterns}
+        pos_dict = defaultdict(list)
         stops = 0
         for i, token in enumerate(tokens):
             if token.lower() in self.stopwords:
