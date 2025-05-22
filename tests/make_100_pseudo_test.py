@@ -20,6 +20,7 @@ def sca_filled(db_path: Path, tsv_file: Path) -> sca.SCA:
         tsv_path=tsv_file,
         id_col="id",
         text_column="Content",
+        language=None,
     )
     corpus.add_collocates((("govern*", "minister*"),))
     corpus.save()

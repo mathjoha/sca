@@ -77,7 +77,11 @@ def sqlite3_friendly(column_name):
 
 
 def from_file(
-    tsv_path: str | Path, db_path: str | Path, id_col: str, text_column: str
+    tsv_path: str | Path,
+    db_path: str | Path,
+    id_col: str,
+    text_column: str,
+    language: str = "english",
 ):
     """Creates an SCA object from a TSV/CSV file and a database path.
 
@@ -90,7 +94,7 @@ def from_file(
     Returns:
         An SCA object.
     """
-    corpus = SCA()
+    corpus = SCA(language=language)
     corpus.read_file(
         db_path=db_path,
         tsv_path=tsv_path,
@@ -119,10 +123,14 @@ class SCA:
     db_path = Path("sca.sqlite3")
 
     def __init__(self, language="english"):
-        if not language in stopwords.fileids():
+        if language is None:
+            self.language = None
+            self.stopwords = set()
+        elif not language in stopwords.fileids():
             raise ValueError(f"Invalid language code '{language}'")
-        self.language = language
-        self.stopwords = set(stopwords.words(language))
+        else:
+            self.language = language
+            self.stopwords = set(stopwords.words(language))
         self.custom_stopwords = set()
 
         self.collocates = set()
