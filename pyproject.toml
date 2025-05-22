@@ -12,12 +12,11 @@ license = {"file"= "LICENSE"}
 keywords = ["linguistics", "collocation", "corpus analysis"] # Add relevant keywords
 
 dependencies =[
-  "tqdm",
-  "pandas",
-  "nltk",
-  "ipywidgets",
+  "nltk==3.9.1",
+  "pandas==2.2.3",
   "PyYAML==6.0.2",
-  "sqlite-utils"
+  "tqdm==4.67.1",
+  "sqlite-utils==3.38",
 ]
 
 authors = [
