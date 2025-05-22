@@ -1000,10 +1000,6 @@ class SCA:
                         f"DROP TABLE IF EXISTS [{table_name}]"
                     )  # Quote table name
                     logger.info(f"Dropped table '{table_name}'.")
-                elif table_name and isinstance(table_name, str):
-                    logger.warning(
-                        f"Skipping drop for potentially unsafe table name: {table_name}"
-                    )
 
             cursor.execute("DELETE FROM named_collocate")
             logger.info("Cleared 'named_collocate' table.")
