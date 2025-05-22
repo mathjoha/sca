@@ -19,7 +19,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-cleaner_pattern = re.compile(r"[^a-z]+")
+cleaner_pattern = re.compile(r"[^a-zа-я]+")
 tokenizer_pattern = re.compile(r"\s+")
 
 
@@ -73,7 +73,7 @@ def sqlite3_friendly(column_name):
     Returns:
         True if the column name is SQLite-friendly, False otherwise.
     """
-    return not re.search(r"[^a-zA-Z0-9_]", column_name)
+    return not re.search(r"[^a-zA-Z0-9_А-Яа-я]", column_name)
 
 
 def from_file(

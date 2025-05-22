@@ -22,7 +22,8 @@ def sca_filled(db_path: Path, tsv_file: Path) -> sca.SCA:
         text_column="Content",
         language=None,
     )
-    corpus.add_collocates((("govern*", "minister*"),))
+    corpus.add_stopwords({"и", "да", "се", "не", "на", "е", "за", "но", "от"})
+    corpus.add_collocates((("Наркоти*", "алкого*"),))
     corpus.save()
     return corpus
 
@@ -127,9 +128,7 @@ def test_name_id_col(sca_filled: sca.SCA):
 
 class TestSavedSettings:
     def test_collocates(self, settings: dict):
-        assert settings["collocates"] == {
-            ("govern*", "minister*"),
-        }
+        assert settings["collocates"] == {("алкого*", "наркоти*")}
 
     def test_stored(self, settings: dict, sca_filled: sca.SCA):
         assert set(settings["collocates"]) == sca_filled.collocates
