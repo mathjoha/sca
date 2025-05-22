@@ -20,27 +20,12 @@
     - Unhappy path test: Test invalid file formats and missing files  ✅
 
 2. Add method to add/remove stopwords programmatically
-    - Happy path test: Test adding and removing stopwords
-    ```python
-    def test_modify_stopwords():
-        corpus = SCA()
-        corpus.add_stopwords({"new1", "new2"})
-        assert "new1" in corpus.stopwords
-
-        corpus.remove_stopwords({"new1"})
-        assert "new1" not in corpus.stopwords
-    ```
+    - Happy path test: Test adding and removing stopwords ✅
     - Implement feature:
-        - Add add_stopwords and remove_stopwords methods
-        - Add validation for input types
-        - Update stopwords set in place
-    - Unhappy path test: Test invalid inputs
-    ```python
-    def test_invalid_stopwords_modification():
-        corpus = SCA()
-        with pytest.raises(TypeError):
-            corpus.add_stopwords("not_a_set")
-    ```
+        - Add add_stopwords and remove_stopwords methods ✅
+        - Add validation for input types ✅
+        - Update stopwords set in place ✅
+    - Unhappy path test: Test invalid inputs ✅
 
 ## 3. Add Stopwords Persistence
 1. Add stopwords to YAML configuration ✅
