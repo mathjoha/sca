@@ -725,7 +725,6 @@ class SCA:
             f"and window <= {window})"
         )
 
-
     def add_collocates(self, collocates):
         """Adds new collocate pairs to the SCA object.
 
@@ -789,9 +788,11 @@ class SCA:
             logger.info(
                 "No new collocate pairs to add (either duplicates or invalid). "
             )
-            raise ValueError("No new collocate pairs to add (either duplicates or invalid).")
+            raise ValueError(
+                "No new collocate pairs to add (either duplicates or invalid)."
+            )
 
-    def collocate_to_speech_query(self, collocates):
+    def collocate_to_textID_query(self, collocates):
         """Generates an SQL subquery to select distinct text IDs based on collocates.
 
         Args:
@@ -807,7 +808,7 @@ class SCA:
         )
 
         id_query = (
-            f" (select distinct {self.id_col} from "
+            f" (select {self.id_col} as window from "
             f"collocate_window where {conditions}) "
         )
 
@@ -824,7 +825,7 @@ class SCA:
             A database cursor pointing to the results of the count query.
             The query groups by all columns specified in `self.data_cols`.
         """
-        id_query = self.collocate_to_speech_query(collocates)
+        id_query = self.collocate_to_textID_query(collocates)
 
         c = self.conn.execute(
             f"""
@@ -871,7 +872,7 @@ class SCA:
             f"Baseline calculation complete. Found {len(df_baseline)} baseline groups."
         )
 
-        id_query = self.collocate_to_speech_query(collocates)
+        id_query = self.collocate_to_textID_query(collocates)
         logger.info("Generated ID query for collocates.")
 
         logger.info("Calculating collocate-filtered counts.")
@@ -913,51 +914,11 @@ class SCA:
     ## headers = [d[0] for d in cursor.description]
 
     def create_collocate_group(self, collocate_name, collocates):
-        """Creates a named group of collocates and stores detailed token information.
+        """Creates a named group of collocates and stores matched text-ids"""
 
-        This method performs several actions:
-        1. Creates (if not exists) a 'named_collocate' table to store metadata about
-           the collocate group (name, table_name, term1, term2, window). This
-           table has a UNIQUE constraint on (name, term1, term2, window).
-        2. Inserts the provided collocate specifications into 'named_collocate'.
-        3. Creates a new table named 'group_<collocate_name>' (with spaces in
-           collocate_name replaced by underscores). This table has a UNIQUE
-           constraint on (text_fk, raw_text) to ensure each raw token from a
-           specific text is listed only once.
-        4. Populates this new table with token-level information for all texts that
-           match any of the specified collocates. For each token, it stores:
-           - text_fk: Foreign key to the original text in the 'raw' table.
-           - raw_text: The original token string.
-           - token: The cleaned token string.
-           - sw: Boolean indicating if the token is a stopword.
-           - conterm: (Currently seems to be set to None or False, purpose might be
-                      related to "context term" - needs clarification).
-           - collocate_begin: (Currently seems to be set to None, purpose unclear).
-           - collocate_end: (Currently seems to be set to None, purpose unclear).
-
-        Args:
-            collocate_name: A string name for the collocate group.
-            collocates: An iterable of collocate specifications, where each
-                        specification is a tuple (pattern1, pattern2, window).
-        """
         table_name = "group_" + collocate_name.strip().replace(" ", "_")
-        if (
-            self.conn.execute(
-                "select name from sqlite_master where type =='table' and name == :table_name",
-                {"table_name": table_name},
-            ).fetchone()
-            is not None
-        ):
-            logger.debug(
-                f"Collocate group for '{collocate_name}'. "
-                f"Table name: '{table_name}', exists.\nExiting."
-            )
-            return None
-
         logger.info(
-            f"Creating collocate group: '{collocate_name}'. Table name: '{table_name}'."
-        )
-        logger.info(
+            f"Creating collocate group: '{collocate_name}'. Table name: '{table_name}'. "
             f"Using {len(collocates)} collocate specifications for this group."
         )
 
@@ -966,126 +927,40 @@ class SCA:
             {
                 "name": collocate_name,
                 "table_name": table_name,
-                "term1": c[0],
-                "term2": c[1],
-                "window": c[2],
+                "term1": pattern1,
+                "term2": pattern2,
+                "window": window,
             }
-            for c in collocates
+            for pattern1, pattern2, window in collocates
         ]
-        db["named_collocate"].upsert_all(
-            named_collocate_records,
-            pk=("name", "term1", "term2", "window"),
-            alter=True,
+        db["named_collocate"].insert_all(
+            records=named_collocate_records,
+            pk=("name", "term1", "term2"),
+            alter=False,
         )
         logger.info(
-            f"Upserted {len(collocates)} specifications into 'named_collocate' for group '{collocate_name}'."
+            f"Inserted {len(collocates)} specifications into 'named_collocate' for group '{collocate_name}'."
         )
 
         self.conn.execute(
             f"""
-            create table {table_name} (text_fk, raw_text, token,
-            sw, conterm, collocate_begin, collocate_end,
-            UNIQUE(text_fk, raw_text))
+            create table {table_name} (text_fk, collocate_name fk)
             """
         )
-        logger.info(
-            f"Created table '{table_name}' for collocate group details."
-        )
 
-        id_query = self.collocate_to_speech_query(collocates)
+        id_query = self.collocate_to_textID_query(collocates)
         logger.info("Generated ID query for collocates in this group.")
 
-        if self.conn.execute(id_query[2:-2]).fetchone() is None:
-            self.add_collocates([c[:2] for c in collocates])
-
-        collocate_patterns = {
-            pattern for collocate in collocates for pattern in collocate[:2]
-        }
-        logger.info(
-            f"Identified {len(collocate_patterns)} unique patterns for this group: {collocate_patterns}"
-        )
-
-        pattern_to_targets = defaultdict(set)
-        for pattern1, pattern2, window in collocates:
-            pattern_to_targets[pattern1] |= {
-                (pattern2, window),
-            }
-            pattern_to_targets[pattern2] |= {
-                (pattern1, window),
-            }
-
-        logger.info(
-            f"Processing texts for collocate group '{collocate_name}'."
-        )
-        speech_data_to_insert = []
-        for text_fk, text in self.conn.execute(
-            f"""
-            select {self.id_col}, {self.text_column} from raw
-            where {self.id_col} in {id_query}
-            """
-        ):
-            sw_pos_adjust = 0
-            current_speech_tokens = []
-            for pos, raw_token in enumerate(tokenizer(text)):
-                token = cleaner(raw_token)
-
-                is_sw = token in self.stopwords
-
-                if is_sw:
-                    sw_pos_adjust += 1
-                    sw_pos = None
-                    conterm = False
-                    collocate = False
-
-                else:
-                    sw_pos = pos - sw_pos_adjust
-                    conterm = None
-                    collocates_match = [
-                        pattern
-                        for pattern in collocate_patterns
-                        if fnmatch(token, pattern)
-                    ]
-
-                current_speech_tokens.append(
-                    [
-                        text_fk,
-                        pos,
-                        sw_pos,
-                        raw_token,
-                        token,
-                        is_sw,
-                        conterm,
-                    ]
-                )
-
-            for i, token_data in enumerate(current_speech_tokens):
-                if token_data[5]:
-                    current_speech_tokens[i] = token_data[:6] + [
-                        False,
-                        None,
-                        None,
-                    ]
-                else:
-                    current_speech_tokens[i] = token_data[:6] + [
-                        False,
-                        None,
-                        None,
-                    ]
-            speech_data_to_insert.extend(current_speech_tokens)
-
-        logger.info(
-            f"Inserting {len(speech_data_to_insert)} token entries into '{table_name}'."
-        )
+        ids = self.conn.execute(id_query[2:-2]).fetchall()
         self.conn.executemany(
             f"""
-            insert into {table_name} (text_fk, raw_text, token,
-            sw, conterm, collocate_begin, collocate_end)
-            values (?, ?, ?, ?, ?, ?, ?)
+            insert into {table_name} (text_fk, collocate_name)
+            values (?, "{collocate_name}")
             """,
-            [item[:7] for item in speech_data_to_insert],
+            ids,
         )
-        self.conn.commit()
-        logger.info(f"Successfully inserted token data into '{table_name}'.")
+
+        logger.info(f"Logged {len(ids)} used texts for {collocate_name}")
 
     def _reset_stopwords_dependent_calculations(self):
         """Resets database tables and internal states affected by stopword changes."""

@@ -1,3 +1,4 @@
+import sqlite3
 from pathlib import Path
 
 import pandas as pd
@@ -36,12 +37,13 @@ def minimal_corpus_for_collocation(tmp_path: Path) -> SCA:
     db_path = tmp_path / "minimal_colloc.sqlite3"
 
     data = {
-        "doc_id": ["text1", "text2", "text3", "text4"],
+        "doc_id": ["text1", "text2", "text3", "text4", "text5"],
         "content": [
             "alpha bravo charlie delta",  # alpha, bravo together
             "alpha foxtrot charlie golf",  # alpha, charlie, not close
             "hotel india bravo xray",  # bravo, no alpha
             "alpha bravo alpha bravo echo",  # multiple alpha, bravo
+            "alpha trash trash trash trash trash bravo",  # multiple alpha, bravo
         ],
     }
     df = pd.DataFrame(data)
@@ -560,44 +562,40 @@ def test_stopwords_impact_on_create_collocate_group(
 
     collocates_spec = [("alpha", "bravo", 5)]
     group_name_v1 = "test_group_v1"
+
     corpus.create_collocate_group(group_name_v1, collocates_spec)
 
     group_table_name_v1 = f"group_{group_name_v1}"
     df_v1 = pd.read_sql_query(
-        f"SELECT token, sw FROM {group_table_name_v1}", corpus.conn
+        f"SELECT * FROM {group_table_name_v1}", corpus.conn
     )
+    assert len(df_v1) == 0
 
-    # Check specific tokens from text1: "alpha bravo charlie delta"
-    # None of these are stopwords initially in the fixture
-    assert not df_v1[df_v1["token"] == "alpha"]["sw"].iloc[0]
-    assert not df_v1[df_v1["token"] == "bravo"]["sw"].iloc[0]
-    assert not df_v1[df_v1["token"] == "charlie"]["sw"].iloc[0]
-
-    # Add "alpha" as a stopword. This should trigger a reset.
-    corpus.add_stopwords({"alpha"})
-
-    # Recreate the group (or create a new one). The old group table was dropped by the reset.
     group_name_v2 = "test_group_v2"
+    corpus.add_collocates([c[:2] for c in collocates_spec])
     corpus.create_collocate_group(group_name_v2, collocates_spec)
+
     group_table_name_v2 = f"group_{group_name_v2}"
     df_v2 = pd.read_sql_query(
-        f"SELECT token, sw FROM {group_table_name_v2}", corpus.conn
+        f"SELECT * FROM {group_table_name_v2}", corpus.conn
     )
+    assert len(df_v2) == 2
+    assert list(df_v2.text_fk.unique()) == ["text1", "text4"]
 
-    # Now "alpha" should be marked as a stopword
-    assert df_v2[df_v2["token"] == "alpha"]["sw"].iloc[0]
-    # "bravo" and "charlie" should still not be stopwords
-    assert not df_v2[df_v2["token"] == "bravo"]["sw"].iloc[0]
-    assert not df_v2[df_v2["token"] == "charlie"]["sw"].iloc[0]
+    # Add "alpha" as a stopword. This should trigger a reset.
+    corpus.add_stopwords({"trash"})
 
-    # Remove "alpha" from stopwords. Reset is triggered.
-    corpus.remove_stopwords({"alpha"})
-    group_name_v3 = "test_group_v3"
-    corpus.create_collocate_group(group_name_v3, collocates_spec)
-    group_table_name_v3 = f"group_{group_name_v3}"
-    df_v3 = pd.read_sql_query(
-        f"SELECT token, sw FROM {group_table_name_v3}", corpus.conn
+    with pytest.raises(pd.errors.DatabaseError, match="no such table"):
+        df_v2 = pd.read_sql_query(
+            f"SELECT * FROM {group_table_name_v2}", corpus.conn
+        )
+
+    group_name_v2 = "test_group_v2"
+    corpus.add_collocates([c[:2] for c in collocates_spec])
+    corpus.create_collocate_group(group_name_v2, collocates_spec)
+
+    df_v2 = pd.read_sql_query(
+        f"SELECT * FROM {group_table_name_v2}", corpus.conn
     )
-
-    # "alpha" should no longer be a stopword
-    assert not df_v3[df_v3["token"] == "alpha"]["sw"].iloc[0]
+    assert len(df_v2) == 3
+    assert list(df_v2.text_fk.unique()) == ["text1", "text4", "text5"]
