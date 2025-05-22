@@ -21,6 +21,20 @@ def sca_filled(db_path: Path, csv_file: Path) -> sca.SCA:
         id_col="speech_id",
         text_column="speech_text",
     )
+    corpus.add_stopwords(
+        {
+            "hon",
+            "house",
+            "member",
+            "common",
+            "speaker",
+            "mr",
+            "friend",
+            "gentleman",
+            "one",
+            "would",
+        }
+    )
     corpus.add_collocates((("govern*", "minister*"),))
     corpus.save()
     return corpus
