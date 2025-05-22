@@ -1,15 +1,24 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
 [project]
-dependencies =[
-  "tqdm",
-  "pandas",
-  "nltk",
-  "ipywidgets",
-  "PyYAML==6.0.2",
-  "sqlite-utils"
-]
 name ="sca"
-dynamic = ["version"]
+dynamic = ["version"] # This will be managed by hatch-vcs
+description="An implementation of Structural Collocation Analysis (https://doi.org/10.1080/01615440.2024.2414259)"
+readme = "README.md"
 requires-python = ">= 3.8"
+license = {"file"= "LICENSE"}
+keywords = ["linguistics", "collocation", "corpus analysis"] # Add relevant keywords
+
+dependencies =[
+  "nltk==3.9.1",
+  "pandas==2.2.3",
+  "PyYAML==6.0.2",
+  "tqdm==4.67.1",
+  "sqlite-utils==3.38",
+]
+
 authors = [
   {name = "Mathias Johansson", email = "MathiasJoha@gmail.com"},
   {name = "Betto van Waarden"}
@@ -17,9 +26,21 @@ authors = [
 maintainers = [
   {name="Mathias Johansson", email="MathiasJoha@gmail.com"}
 ]
-readme = "README.md"
-description="An implementation of Structural Collocation Analysis (https://doi.org/10.1080/01615440.2024.2414259)"
-license = {"file"= "LICENSE"}
+
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Topic :: Text Processing :: Linguistic",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/mathjoha/sca"
+"Bug Tracker" = "https://github.com/mathjoha/sca/issues"
+
+[tool.hatch.version]
+source = "vcs"
+
 
 [tool.isort]
 profile = "black"
@@ -50,7 +71,6 @@ force-exclude = '''
 '''
 
 
-
 [tool.pytest.ini_options]
 addopts = [
     "--import-mode=importlib",
@@ -61,10 +81,32 @@ markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')"
 ]
 
-[dependency-groups]
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+    "/tests", # Add tests to sdist
+    "LICENSE",
+    "README.md"
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/sca"]
+
+
+[tool.hatch.envs.default]
+dependencies = [
+  "coverage-badge==1.1.2",
+  "hatch==1.14.1",
+  "pytest==8.3.5",
+  "pytest-cov==6.1.1",
+  "tox==4.26.0"
+]
+
+[project.optional-dependencies]
 dev = [
-  "pytest",
-  "pytest-cov",
-  "coverage-badge",
-  "tox"
+  "coverage-badge==1.1.2",
+  "pytest==8.3.5",
+  "pytest-cov==6.1.1",
+  "tox==4.26.0",
+  "hatch==1.14.1"
 ]

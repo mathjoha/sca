@@ -160,7 +160,6 @@ class TestSavedSettings:
     def test_yaml_read_collocates(
         self, yml_loaded: sca.SCA, sca_filled: sca.SCA
     ):
-
         filled_collocates = sca_filled.settings_dict()["collocates"]
         loaded_collocates = yml_loaded.settings_dict()["collocates"]
         assert loaded_collocates == filled_collocates

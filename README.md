@@ -3,7 +3,11 @@
 
 # Structural Collocation Analysis
 
-This is a python + sqlite implementation of the method _Structural Collocation Analysis_ as described in [this paper]{https://doi.org/10.1080/01615440.2024.2414259}
+This is a python + sqlite implementation of the method
+_Structural Collocation Analysis_ as described in
+[Structural reading: Developing the method of Structural Collocation Analysis using a case study on parliamentary reporting](https://doi.org/10.1080/01615440.2024.2414259)
+and used in
+[Democracy (Not) on Display: A Structural Collocation Analysis of the Mother of All Parliaments’ Reluctance to Broadcast Herself](https://doi.org/10.1093/pa/gsad002)
 
 ## Installation & Usage
 
@@ -12,7 +16,11 @@ This is a python + sqlite implementation of the method _Structural Collocation A
 You can install the package directly from GitHub using pip:
 
 ```bash
-pip install git+https://github.com/matjoha/sca.git
+python -m pip install git+https://github.com/matjoha/sca.git
+```
+
+```bash
+python -m pip install scolan
 ```
 
 ### Developer Setup
@@ -33,12 +41,12 @@ source .venv/bin/activate  # On Windows use: .venv\Scripts\activate
 
 3. Install the package in editable mode with development dependencies:
 ```bash
-pip install -e ".[dev]"
+python -m pip install -e ".[dev]"
 ```
 
 4. Install pre-commit hooks:
 ```bash
-pip install pre-commit
+python -m pip install pre-commit
 pre-commit install
 pre-commit install --hook-type pre-push
 ```
