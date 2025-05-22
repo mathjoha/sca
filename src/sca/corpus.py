@@ -481,11 +481,16 @@ class SCA:
                 )
 
         self.columns = sorted(
-            set(map(str.lower, data.columns))
-            - {
-                self.id_col,
-                self.text_column,
-            }
+            set(
+                map(
+                    str.lower,
+                    set(data.columns)
+                    - {
+                        self.id_col,
+                        self.text_column,
+                    },
+                )
+            )
         )
         logger.info(f"Set data columns: {self.columns}")
 
