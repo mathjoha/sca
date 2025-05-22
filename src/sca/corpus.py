@@ -123,7 +123,7 @@ class SCA:
             raise ValueError(f"Invalid language code '{language}'")
         self.language = language
         self.stopwords = set(stopwords.words(language))
-        self.stopwords |= {
+        self.custom_stopwords = {
             "hon",
             "house",
             "member",
@@ -135,6 +135,8 @@ class SCA:
             "one",
             "would",
         }
+
+        self.stopwords |= self.custom_stopwords
         self.collocates = set()
         logger.info(
             f"Initialized SCA with language '{language}' and {len(self.stopwords)} stopwords"
@@ -153,7 +155,8 @@ class SCA:
         if not file_path.exists():
             raise FileNotFoundError(f"Stopwords file not found: {file_path}")
 
-        custom_stopwords = file_path.read_text().splitlines()
+        with open(file_path, "r", encoding="utf8") as f:
+            custom_stopwords = {word.lower() for word in f.read().split()}
         self.stopwords.update(custom_stopwords)
         logger.info(
             f"Added {len(custom_stopwords)} custom stopwords from {file_path}"
@@ -266,6 +269,7 @@ class SCA:
         settings["id_col"] = self.id_col
         settings["text_column"] = self.text_column
         settings["columns"] = sorted(list(self.columns))
+        settings["custom_stopwords"] = sorted(self.custom_stopwords)
         with open(self.yaml_path, "w", encoding="utf8") as f:
             safe_dump(data=settings, stream=f)
         logger.info("Successfully saved SCA settings")
@@ -308,6 +312,8 @@ class SCA:
         logger.info(
             f"Loaded language '{self.language}' with {len(self.stopwords)} stopwords"
         )
+        self.custom_stopwords = set(settings["custom_stopwords"])
+        self.stopwords.update(self.custom_stopwords)
 
         self.db_path = Path(settings_path).parent / Path(settings["db_path"])
         logger.info(f"Set db_path to {self.db_path} from settings file.")
@@ -1052,7 +1058,7 @@ class SCA:
         self.conn.commit()
         logger.info(f"Successfully inserted token data into '{table_name}'.")
 
-    def add_stopwords(self, stopwords: set):
+    def add_stopwords(self, new_stopwords: set):
         """Add custom stopwords programmatically.
 
         Args:
@@ -1061,11 +1067,12 @@ class SCA:
         Raises:
             TypeError: If stopwords is not a set.
         """
-        if not isinstance(stopwords, set):
+        if not isinstance(new_stopwords, set):
             raise TypeError("Stopwords must be provided as a set")
 
-        self.stopwords.update(stopwords)
-        logger.info(f"Added {len(stopwords)} custom stopwords")
+        self.custom_stopwords |= new_stopwords - self.stopwords
+        self.stopwords |= new_stopwords
+        logger.info(f"Added {len(new_stopwords)} custom stopwords")
 
     def remove_stopwords(self, stopwords: set):
         """Remove stopwords programmatically.

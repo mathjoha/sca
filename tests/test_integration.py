@@ -211,6 +211,7 @@ class TestFileAndConfigLoading:
             "text_column: text\n"
             "columns: [col1, col2]\n"
             "language: english\n"
+            "custom_stopwords: [custom1, custom2]\n"
         )
         yml_path = tmp_path / "missing_key.yml"
         with open(yml_path, "w") as f:

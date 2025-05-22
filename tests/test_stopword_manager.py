@@ -73,27 +73,24 @@ def test_invalid_stopwords_modification():
         corpus.remove_stopwords("not_a_set")
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="Red Phase - Need to implement custom stopwords persistence",
-)
 def test_stopwords_persistence(tmp_path):
     # Create initial corpus with custom stopwords
     yml_path = tmp_path / "test_stopwords.yml"
     db_path = tmp_path / "test_stopwords.sqlite3"
 
     corpus = SCA(language="french")
-    corpus.add_stopwords({"custom1", "custom2"})
     corpus.db_path = db_path
     corpus.yaml_path = yml_path
     corpus.id_col = "id"  # Initialize required attributes
     corpus.text_column = "text"
     corpus.columns = []
+    corpus.add_stopwords({"custom1", "custom2"})
     corpus.save()
 
     # Load corpus from saved configuration
     loaded_corpus = from_yml(yml_path)
     assert loaded_corpus.language == "french"
+    assert "custom1" in loaded_corpus.custom_stopwords
     assert "custom1" in loaded_corpus.stopwords
     assert "custom2" in loaded_corpus.stopwords
     assert "le" in loaded_corpus.stopwords  # French stopword
