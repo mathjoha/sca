@@ -3,7 +3,7 @@ requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project]
-name ="sca"
+name ="scola"
 dynamic = ["version"] # This will be managed by hatch-vcs
 description="An implementation of Structural Collocation Analysis (https://doi.org/10.1080/01615440.2024.2414259)"
 readme = "README.md"
