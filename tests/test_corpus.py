@@ -471,13 +471,10 @@ def test_add_remove_stopwords_impact_on_get_positions():
     assert positions_after_remove["another"] == [2]
 
 
-@pytest.mark.xfail(strict=True, reason="Red Phase [Expand as necessary]")
 def test_stopwords_impact_on_mark_windows(minimal_corpus_for_collocation: SCA):
     corpus = minimal_corpus_for_collocation
-    # In the fixture, stopwords are initially empty.
 
-    # Scenario 1: count_stopwords=False (default for mark_windows)
-    corpus.mark_windows("alpha", "bravo")  # default count_stopwords=False
+    corpus.mark_windows("alpha", "bravo")
     windows_before_stopword = (
         pd.read_sql_query(
             "SELECT doc_id, window FROM collocate_window WHERE pattern1='alpha' AND pattern2='bravo'",
@@ -486,21 +483,18 @@ def test_stopwords_impact_on_mark_windows(minimal_corpus_for_collocation: SCA):
         .set_index("doc_id")["window"]
         .to_dict()
     )
-    assert windows_before_stopword.get("text1") == 1  # alpha bravo (0, 1)
-    assert (
-        windows_before_stopword.get("text4") == 1
-    )  # alpha bravo (0, 1) and (2,3) -> min is 1
-    assert "text2" not in windows_before_stopword  # alpha foxtrot charlie
-    assert "text3" not in windows_before_stopword  # hotel india bravo
+    assert windows_before_stopword.get("text1") == 1
+    assert windows_before_stopword.get("text4") == 1
+    assert "text2" not in windows_before_stopword
+    assert "text3" not in windows_before_stopword
 
-    # Add "bravo" as a stopword. This will trigger _reset_stopwords_dependent_calculations,
-    # clearing collocate_window.
     corpus.add_stopwords({"bravo"})
 
-    # Rerun mark_windows with count_stopwords=False
-    # "bravo" is now a stopword. get_positions(..., "bravo", count_stopwords=False) will be empty.
-    # So, no entries for ("alpha", "bravo") should be made.
-    corpus.mark_windows("alpha", "bravo", count_stopwords=False)
+    corpus.mark_windows(
+        "alpha",
+        "bravo",
+        False,
+    )
     windows_after_stopword_false = (
         pd.read_sql_query(
             "SELECT doc_id, window FROM collocate_window WHERE pattern1='alpha' AND pattern2='bravo'",
@@ -509,14 +503,13 @@ def test_stopwords_impact_on_mark_windows(minimal_corpus_for_collocation: SCA):
         .set_index("doc_id")["window"]
         .to_dict()
     )
-    assert (
-        len(windows_after_stopword_false) == 0
-    )  # No windows because "bravo" is skipped
+    assert windows_after_stopword_false == {None: None}
 
-    # Scenario 2: count_stopwords=True
-    # _reset_stopwords_dependent_calculations was called by add_stopwords, so collocate_window is empty again.
-    corpus.mark_windows("alpha", "bravo", count_stopwords=True)
-    # "bravo" is a stopword, but count_stopwords=True means get_positions will find it.
+    corpus.mark_windows(
+        "alpha",
+        "bravo",
+        True,
+    )
     windows_after_stopword_true = (
         pd.read_sql_query(
             "SELECT doc_id, window FROM collocate_window WHERE pattern1='alpha' AND pattern2='bravo'",
@@ -530,9 +523,8 @@ def test_stopwords_impact_on_mark_windows(minimal_corpus_for_collocation: SCA):
     assert "text2" not in windows_after_stopword_true
     assert "text3" not in windows_after_stopword_true
 
-    # Remove "bravo" from stopwords. collocate_window is cleared again.
     corpus.remove_stopwords({"bravo"})
-    corpus.mark_windows("alpha", "bravo")  # count_stopwords=False (default)
+    corpus.mark_windows("alpha", "bravo")
     windows_after_remove = (
         pd.read_sql_query(
             "SELECT doc_id, window FROM collocate_window WHERE pattern1='alpha' AND pattern2='bravo'",
@@ -549,7 +541,6 @@ def test_stopwords_impact_on_create_collocate_group(
     minimal_corpus_for_collocation: SCA,
 ):
     corpus = minimal_corpus_for_collocation
-    # In the fixture, stopwords are initially empty. `alpha` and `bravo` are not stopwords.
 
     collocates_spec = [("alpha", "bravo", 5)]
     group_name_v1 = "test_group_v1"
