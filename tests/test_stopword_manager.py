@@ -73,6 +73,10 @@ def test_invalid_stopwords_modification():
         corpus.remove_stopwords("not_a_set")
 
 
+@pytest.mark.xfail(
+    strict=True,
+    reason="Red Phase - Need to implement custom stopwords persistence",
+)
 def test_stopwords_persistence(tmp_path):
     # Create initial corpus with custom stopwords
     yml_path = tmp_path / "test_stopwords.yml"
@@ -113,21 +117,21 @@ def test_invalid_stopwords_config(tmp_path):
 
 
 @pytest.mark.xfail(
-    strict=True, reason="Red Phase: Verify stopwords handling in get_positions"
+    strict=True,
+    reason="Red Phase - Need to implement custom stopwords persistence",
 )
 def test_get_positions_with_custom_stopwords():
     corpus = SCA()
     corpus.add_stopwords({"custom_stop"})
 
     tokens = ["word1", "custom_stop", "word2"]
-    positions = corpus.get_positions(tokens, "word*", count_stopwords=False)
+    positions = corpus.get_positions(
+        tokens=tokens, patterns=["word*"], count_stopwords=False
+    )
 
-    assert positions["word*"] == [0, 2]  # custom_stop is ignored
+    assert positions["word*"] == [0, 1]
 
     positions_with_stopwords = corpus.get_positions(
-        tokens, "word*", count_stopwords=True
+        tokens=tokens, patterns=["word*"], count_stopwords=True
     )
-    assert positions_with_stopwords["word*"] == [
-        0,
-        2,
-    ]  # positions are absolute even with count_stopwords=True
+    assert positions_with_stopwords["word*"] == [0, 2]

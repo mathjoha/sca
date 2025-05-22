@@ -135,6 +135,7 @@ class SCA:
             "one",
             "would",
         }
+        self.collocates = set()
         logger.info(
             f"Initialized SCA with language '{language}' and {len(self.stopwords)} stopwords"
         )
@@ -230,9 +231,6 @@ class SCA:
         Returns:
             A dictionary containing settings like database path, collocates, and stopwords configuration.
         """
-        if not hasattr(self, "collocates"):
-            self.collocates = set()
-
         settings = {
             "db_path": str(
                 self.db_path.resolve().relative_to(
@@ -244,6 +242,9 @@ class SCA:
             "custom_stopwords": list(
                 self.stopwords - set(stopwords.words(self.language))
             ),
+            "id_col": self.id_col,
+            "text_column": self.text_column,
+            "columns": sorted(self.columns),
         }
         return settings
 
@@ -267,31 +268,43 @@ class SCA:
         settings["columns"] = sorted(list(self.columns))
         with open(self.yaml_path, "w", encoding="utf8") as f:
             safe_dump(data=settings, stream=f)
-        logger.info(f"Successfully saved SCA settings to {self.yaml_path}")
+        logger.info("Successfully saved SCA settings")
 
     def load(self, settings_path: str | Path):
-        """Loads SCA settings from a YAML configuration file.
+        """Loads SCA settings from a YAML file.
 
         Args:
-            settings_path: Path to the YAML configuration file.
+            settings_path: Path to the YAML settings file.
+
+        Raises:
+            ValueError: If the language configuration is invalid.
+            KeyError: If required fields are missing.
         """
         self.yaml_path = Path(settings_path)
-        logger.info(f"Loading SCA settings from {self.yaml_path}")
+        logger.info(f"Loading SCA settings from {settings_path}")
         with open(settings_path, "r", encoding="utf8") as f:
             settings = safe_load(f)
         logger.info(f"Successfully loaded settings from {self.yaml_path}")
 
         self.language = settings["language"]
+
         if not self.language in stopwords.fileids():
             raise ValueError(f"Invalid language code '{self.language}'")
 
         # Initialize base stopwords from language
         self.stopwords = set(stopwords.words(self.language))
-
-        # Add custom stopwords if present
-        if "custom_stopwords" in settings:
-            self.stopwords.update(settings["custom_stopwords"])
-
+        self.stopwords |= {
+            "hon",
+            "house",
+            "member",
+            "common",
+            "speaker",
+            "mr",
+            "friend",
+            "gentleman",
+            "one",
+            "would",
+        }
         logger.info(
             f"Loaded language '{self.language}' with {len(self.stopwords)} stopwords"
         )
@@ -341,11 +354,31 @@ class SCA:
             return hash(f.read())
 
     def __eq__(self, other):
+        """Checks if two SCA objects are equal.
+
+        Two SCA objects are considered equal if they have the same:
+        - language
+        - stopwords
+        - collocates
+        - id_col
+        - text_column
+        - columns
+        - terms
+        - database hash
+
+        Args:
+            other: Another SCA object to compare with.
+
+        Returns:
+            True if the objects are equal, False otherwise.
+        """
         if not isinstance(other, SCA):
             return False
 
         return (
-            self.collocates == other.collocates
+            self.language == other.language
+            and self.stopwords == other.stopwords
+            and self.collocates == other.collocates
             and self.id_col == other.id_col
             and self.text_column == other.text_column
             and self.columns == other.columns

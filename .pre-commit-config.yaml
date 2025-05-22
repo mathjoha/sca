@@ -28,7 +28,7 @@ repos:
         pass_filenames: false
         always_run: true
         verbose: true
-        stages: [commit]
+        stages: [pre-commit]
     -   id: coverage-badge
         name: coverage-badge
         entry: "coverage-badge -fo media/coverage.svg"

@@ -93,22 +93,13 @@
 ## 4. Update Existing Functionality
 1. Update stopwords-dependent methods
     - Happy path test: Test existing functionality with new stopwords system
-    ```python
-    def test_get_positions_with_custom_stopwords():
-        corpus = SCA()
-        corpus.add_stopwords({"custom_stop"})
-        positions = corpus.get_positions(
-            ["word1", "custom_stop", "word2"],
-            count_stopwords=False,
-            "word*"
-        )
-        assert positions["word*"] == [0, 1]  # custom_stop is ignored
-    ```
+
     - Implement feature:
         - Update get_positions to use instance stopwords
         - Update mark_windows to use instance stopwords
         - Update create_collocate_group to use instance stopwords
         - Changing stopwords resets the stopwords-dependent calculations
+        - Resetting calculations recalculates and vacuums.
     - Unhappy path test: Test edge cases with modified stopwords
     ```python
     def test_empty_stopwords():
@@ -121,6 +112,7 @@
         )
         assert positions["word"] == [1]  # "the" not treated as stopword
     ```
+    - SCA __eq__ needs to compare stopwords too.
 
 ## Implementation Order
 1. Add language support (1)
