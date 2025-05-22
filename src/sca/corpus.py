@@ -759,7 +759,7 @@ class SCA:
             }
         if not prepared_collocates:
             logger.info("No collocates to add.")
-            return
+            raise ValueError(f"No clean collocates to add from {collocates=}")
 
         logger.info(
             f"Prepared {len(prepared_collocates)} new collocate pairs for processing."

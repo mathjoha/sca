@@ -867,7 +867,10 @@ class TestSCAOperations:
         # if not str(pattern).isdigit() is the primary filter here.
 
         # Act
-        sca.add_collocates([("numericterm", "123")])
+        with pytest.raises(
+            ValueError, match="No clean collocates to add from"
+        ):
+            sca.add_collocates([("numericterm", "123")])
 
         # Assert
         assert (
