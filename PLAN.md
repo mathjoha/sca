@@ -3,43 +3,21 @@
 ## 1. Add Language Support for NLTK Stopwords
 1. Add language parameter to SCA initialization
     - Happy path test: Test initializing SCA with different languages (e.g., 'english', 'french', 'german') ✅
-    - Implement feature:
-        - Move stopwords initialization to SCA class
-        - Add language parameter to __init__
-        - Load stopwords from nltk based on language
-        - Store stopwords in instance variable
-    - Unhappy path test: Test invalid language codes
-    ```python
-    def test_invalid_language():
-        with pytest.raises(ValueError, match="Invalid language code 'invalid_lang'"):
-            SCA(language='invalid_lang')
-    ```
+    - Implement feature: ✅
+        - Move stopwords initialization to SCA class ✅
+        - Add language parameter to __init__ ✅
+        - Load stopwords from nltk based on language ✅
+        - Store stopwords in instance variable ✅
+    - Unhappy path test: Test invalid language codes ✅
+
 
 ## 2. Add Custom Stopwords Support
 1. Add method to load stopwords from file
-    - Happy path test: Test loading stopwords from file
-    ```python
-    def test_load_stopwords_from_file(tmp_path):
-        # Create test file
-        sw_file = tmp_path / "custom_stopwords.txt"
-        sw_file.write_text("custom1\ncustom2\ncustom3")
-
-        corpus = SCA()
-        corpus.load_stopwords_from_file(sw_file)
-        assert "custom1" in corpus.stopwords
-        assert "custom2" in corpus.stopwords
-    ```
-    - Implement feature:
-        - Add load_stopwords_from_file method
-        - Support txt files with one word per line
-        - Add validation for file format
-    - Unhappy path test: Test invalid file formats and missing files
-    ```python
-    def test_invalid_stopwords_file():
-        with pytest.raises(FileNotFoundError):
-            corpus = SCA()
-            corpus.load_stopwords_from_file("nonexistent.txt")
-    ```
+    - Happy path test: Test loading stopwords from file  ✅
+    - Implement feature:  ✅
+        - Add load_stopwords_from_file method  ✅
+        - Support txt files with one word per line  ✅
+    - Unhappy path test: Test invalid file formats and missing files  ✅
 
 2. Add method to add/remove stopwords programmatically
     - Happy path test: Test adding and removing stopwords
@@ -67,28 +45,12 @@
 ## 3. Add Stopwords Persistence
 1. Add stopwords to YAML configuration ✅
     - Happy path test: Test saving and loading stopwords configuration ✅
-    ```python
-    def test_stopwords_persistence():
-        corpus = SCA(language='french')
-        corpus.add_stopwords({"custom1", "custom2"})
-        corpus.save()
 
-        loaded_corpus = SCA.from_yml("sca.yml")
-        assert loaded_corpus.language == 'french'
-        assert "custom1" in loaded_corpus.stopwords
-    ```
     - Implement feature: ✅
         - Add language and custom stopwords to settings_dict ✅
         - Update save and load methods ✅
         - Add validation for loaded stopwords ✅
     - Unhappy path test: Test loading invalid configurations ✅
-    ```python
-    def test_invalid_stopwords_config():
-        with pytest.raises(ValueError):
-            corpus = SCA()
-            corpus.language = None  # Invalid state
-            corpus.save()
-    ```
 
 ## 4. Update Existing Functionality
 1. Update stopwords-dependent methods
@@ -112,7 +74,7 @@
         )
         assert positions["word"] == [1]  # "the" not treated as stopword
     ```
-    - SCA __eq__ needs to compare stopwords too.
+    - SCA __eq__ needs to compare stopwords too. ✅
 
 ## Implementation Order
 1. Add language support (1)
