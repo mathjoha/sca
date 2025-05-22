@@ -1007,8 +1007,8 @@ class SCA:
 
             self.conn.commit()
             # Vacuum to reclaim space after deletions and drops
-            # self.conn.execute("VACUUM")
-            # logger.info("Vacuumed database.")
+            self.conn.execute("VACUUM")
+            logger.info("Vacuumed database.")
             logger.info("Committed changes for resetting calculations.")
         else:
             logger.info(

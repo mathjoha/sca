@@ -7,16 +7,16 @@
 ## 3. Add Stopwords Persistence ✅
 
 ## 4. Update Existing Functionality
-1. Update stopwords-dependent methods
+1. Update stopwords-dependent methods ✅
     - Happy path test: Test existing functionality with new stopwords system ✅
 
     - Implement feature:
         - Update get_positions to use instance stopwords ✅
-        - Update mark_windows to use instance stopwords
-        - Update create_collocate_group to use instance stopwords
-        - Changing stopwords resets the stopwords-dependent calculations
-        - Resetting calculations recalculates and vacuums.
-    - Unhappy path test: Test edge cases with modified stopwords
+        - Update mark_windows to use instance stopwords ✅
+        - Update create_collocate_group to use instance stopwords ✅
+        - Changing stopwords resets the stopwords-dependent calculations ✅
+        - Resetting calculations recalculates and vacuums. ✅
+    - Unhappy path test: Test edge cases with modified stopwords ✅
     ```python
     def test_empty_stopwords():
         corpus = SCA()
