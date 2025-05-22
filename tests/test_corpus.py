@@ -392,65 +392,56 @@ def test_language_initialization():
 
 def test_empty_stopwords():
     corpus = SCA()
-    # Simulate clearing all stopwords, including base language and custom
     corpus.stopwords = set()
     corpus.custom_stopwords = set()
-    # We need to manually clear corpus.language related stopwords too for this test case
-    # or re-initialize with a language that has no stopwords if such a thing exists in NLTK (unlikely)
-    # For now, explicitly setting corpus.stopwords = set() covers the intent.
 
     positions = corpus.get_positions(
-        ["the", "word"],  # Tokens: "the" at 0, "word" at 1
-        False,  # This means stopwords SHOULD be skipped
+        ["the", "word"],
+        False,
         "word",
     )
-    # If "the" were a stopword and count_stopwords=False, it would be skipped,
-    # and "word" would be at effective position 0.
-    # Since stopwords is empty, "the" is NOT a stopword.
-    # So, "the" is token 0, "word" is token 1.
+
     assert positions["word"] == [1]
 
-    # Test with count_stopwords=True (shouldn't change behavior if list is empty)
     positions_count_true = corpus.get_positions(
         ["the", "word"],
-        True,  # Stopwords (if any) are counted
+        True,
         "word",
     )
     assert positions_count_true["word"] == [1]
 
-    # Test with a different default stopword to ensure it's not skipped
-    corpus_original_stopwords = SCA()  # Standard English stopwords
+    corpus_original_stopwords = SCA()
     assert "the" in corpus_original_stopwords.stopwords
 
     positions_with_stops = corpus_original_stopwords.get_positions(
         ["the", "word"],
-        False,  # "the" should be skipped
+        False,
         "word",
     )
-    # "the" is skipped, "word" is at effective position 0
+
     assert positions_with_stops["word"] == [0]
 
-    # Now, let's test the instance where stopwords were cleared
     corpus_original_stopwords.stopwords.clear()
     corpus_original_stopwords.custom_stopwords.clear()
     positions_after_clear = corpus_original_stopwords.get_positions(
         ["the", "word"],
-        False,  # "the" should be skipped
+        False,
         "word",
     )
-    assert positions_after_clear["word"] == [
-        1
-    ]  # "the" is no longer a stopword
+    assert positions_after_clear["word"] == [1]
 
 
-@pytest.mark.xfail(strict=True, reason="Red Phase [Expand as necessary]")
 def test_add_remove_stopwords_impact_on_get_positions():
     corpus = SCA(language="english")  # Starts with default English stopwords
     tokens = ["a", "custom", "word", "the", "another"]
 
     # Initially, "a" and "the" should be stopwords
     positions = corpus.get_positions(
-        tokens, "custom", "word", "another", count_stopwords=False
+        tokens,
+        False,
+        "custom",
+        "word",
+        "another",
     )
     assert positions["custom"] == [0]  # "a" is skipped
     assert positions["word"] == [1]
@@ -459,7 +450,10 @@ def test_add_remove_stopwords_impact_on_get_positions():
     # Add "custom" as a stopword
     corpus.add_stopwords({"custom"})
     positions_after_add = corpus.get_positions(
-        tokens, "word", "another", count_stopwords=False
+        tokens,
+        False,
+        "word",
+        "another",
     )
     assert (
         "custom" not in positions_after_add
@@ -470,7 +464,12 @@ def test_add_remove_stopwords_impact_on_get_positions():
     # Remove "the" from stopwords
     corpus.remove_stopwords({"the"})
     positions_after_remove = corpus.get_positions(
-        tokens, "custom", "word", "the", "another", count_stopwords=False
+        tokens,
+        False,
+        "custom",
+        "word",
+        "the",
+        "another",
     )
     # "custom" is still a stopword (from previous add)
     # "a" is a default stopword
