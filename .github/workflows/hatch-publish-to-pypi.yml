@@ -29,9 +29,6 @@ jobs:
       - name: Install Hatch
         run: pip install hatch hatch-vcs
 
-      - name: Build package
-        run: hatch build
-
       - name: Validate package version
         run: |
           python -c "
@@ -40,6 +37,9 @@ jobs:
           if '+' in version:
               raise ValueError(f'Invalid version {version} for PyPI upload')
           "
+
+      - name: Build package
+        run: hatch build
 
       - name: mint API token
         id: mint-token
