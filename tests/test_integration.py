@@ -1033,7 +1033,9 @@ class TestSCAOperations:
 
         # Act & Assert
         # Malformed SQL from empty collocates list.
-        with pytest.raises(sqlite3.OperationalError, match=r"syntax error"):
+        with pytest.raises(
+            sqlite3.OperationalError, match=r"incomplete input"
+        ):
             sca.create_collocate_group(group_name, [])
 
     def test_add_collocates_with_pattern_cleaning_to_empty_raises_db_error(
