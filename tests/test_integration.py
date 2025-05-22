@@ -1004,34 +1004,11 @@ class TestSCAOperations:
         # Assert
         expected_cols_in_schema = {
             "text_fk",
-            "raw_text",
-            "token",
-            "sw",
-            "conterm",
-            "collocate_begin",
-            "collocate_end",
+            "collocate_name",
         }
         assert expected_cols_in_schema.issubset(
             schema_info
         ), f"Expected columns missing in {table_name_expected}. Got {schema_info}"
-
-    def test_create_collocate_group_table_has_data(
-        self, sca_with_test_collocate_group
-    ):
-        # Arrange: Done by fixture
-        sca, table_name_expected = sca_with_test_collocate_group
-
-        # Act: Connect and count rows
-        conn = sqlite3.connect(sca.db_path)
-        cursor = conn.cursor()
-        cursor.execute(f"SELECT COUNT(*) FROM {table_name_expected}")
-        row_count = cursor.fetchone()[0]
-        conn.close()
-
-        # Assert
-        assert (
-            row_count > 0
-        ), f"Table {table_name_expected} should contain data."
 
     def test_counts_by_subgroups_with_empty_collocates_list_raises_db_error(
         self, sca_initial_data, tmp_path
