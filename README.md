@@ -3,7 +3,11 @@
 
 # Structural Collocation Analysis
 
-This is a python + sqlite implementation of the method _Structural Collocation Analysis_ as described in [this paper]{https://doi.org/10.1080/01615440.2024.2414259}
+This is a python + sqlite implementation of the method
+_Structural Collocation Analysis_ as described in
+[Structural reading: Developing the method of Structural Collocation Analysis using a case study on parliamentary reporting](https://doi.org/10.1080/01615440.2024.2414259)
+and used in
+[Democracy (Not) on Display: A Structural Collocation Analysis of the Mother of All Parliaments’ Reluctance to Broadcast Herself](https://doi.org/10.1093/pa/gsad002)
 
 ## Installation & Usage
 
