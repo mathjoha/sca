@@ -432,10 +432,9 @@ def test_empty_stopwords():
 
 
 def test_add_remove_stopwords_impact_on_get_positions():
-    corpus = SCA(language="english")  # Starts with default English stopwords
+    corpus = SCA(language="english")
     tokens = ["a", "custom", "word", "the", "another"]
 
-    # Initially, "a" and "the" should be stopwords
     positions = corpus.get_positions(
         tokens,
         False,
@@ -443,11 +442,10 @@ def test_add_remove_stopwords_impact_on_get_positions():
         "word",
         "another",
     )
-    assert positions["custom"] == [0]  # "a" is skipped
+    assert positions["custom"] == [0]
     assert positions["word"] == [1]
-    assert positions["another"] == [2]  # "the" is skipped
+    assert positions["another"] == [2]
 
-    # Add "custom" as a stopword
     corpus.add_stopwords({"custom"})
     positions_after_add = corpus.get_positions(
         tokens,
@@ -455,13 +453,10 @@ def test_add_remove_stopwords_impact_on_get_positions():
         "word",
         "another",
     )
-    assert (
-        "custom" not in positions_after_add
-    )  # "custom" should now be skipped
-    assert positions_after_add["word"] == [0]  # "a", "custom" skipped
-    assert positions_after_add["another"] == [1]  # "the" skipped
+    assert "custom" not in positions_after_add
+    assert positions_after_add["word"] == [0]
+    assert positions_after_add["another"] == [1]
 
-    # Remove "the" from stopwords
     corpus.remove_stopwords({"the"})
     positions_after_remove = corpus.get_positions(
         tokens,
@@ -471,12 +466,8 @@ def test_add_remove_stopwords_impact_on_get_positions():
         "the",
         "another",
     )
-    # "custom" is still a stopword (from previous add)
-    # "a" is a default stopword
-    assert positions_after_remove["word"] == [0]  # "a", "custom" skipped
-    assert positions_after_remove["the"] == [
-        1
-    ]  # "the" is no longer a stopword
+    assert positions_after_remove["word"] == [0]
+    assert positions_after_remove["the"] == [1]
     assert positions_after_remove["another"] == [2]
 
 
