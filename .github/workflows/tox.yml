@@ -9,12 +9,11 @@ jobs:
       matrix:
         python: ["3.10", "3.11", "3.12" ]
     steps:
-      - uses: actions/checkout@v4
-      - name: Submodule init
-        run: git submodule init
-      - name: Submodule update
-        run: git submodule update
-      - name: Setup Python
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: 'recursive' # Handles submodule init and update
+      - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python }}

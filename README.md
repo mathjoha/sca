@@ -41,12 +41,12 @@ source .venv/bin/activate  # On Windows use: .venv\Scripts\activate
 
 3. Install the package in editable mode with development dependencies:
 ```bash
-pip install -e ".[dev]"
+python -m pip install -e ".[dev]"
 ```
 
 4. Install pre-commit hooks:
 ```bash
-pip install pre-commit
+python -m pip install pre-commit
 pre-commit install
 pre-commit install --hook-type pre-push
 ```
