@@ -757,6 +757,10 @@ class SCA:
             prepared_collocates |= {
                 tuple(sorted(collocate)),
             }
+        if not prepared_collocates:
+            logger.info("No collocates to add.")
+            return
+
         logger.info(
             f"Prepared {len(prepared_collocates)} new collocate pairs for processing."
         )
