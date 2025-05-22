@@ -19,7 +19,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-cleaner_pattern = re.compile(r"[^a-z]+")
+cleaner_pattern = re.compile(r"[^a-zа-я]+")
 tokenizer_pattern = re.compile(r"\s+")
 
 
@@ -73,11 +73,15 @@ def sqlite3_friendly(column_name):
     Returns:
         True if the column name is SQLite-friendly, False otherwise.
     """
-    return not re.search(r"[^a-zA-Z0-9_]", column_name)
+    return not re.search(r"[^a-zA-Z0-9_А-Яа-я]", column_name)
 
 
 def from_file(
-    tsv_path: str | Path, db_path: str | Path, id_col: str, text_column: str
+    tsv_path: str | Path,
+    db_path: str | Path,
+    id_col: str,
+    text_column: str,
+    language: str = "english",
 ):
     """Creates an SCA object from a TSV/CSV file and a database path.
 
@@ -90,7 +94,7 @@ def from_file(
     Returns:
         An SCA object.
     """
-    corpus = SCA()
+    corpus = SCA(language=language)
     corpus.read_file(
         db_path=db_path,
         tsv_path=tsv_path,
@@ -119,16 +123,22 @@ class SCA:
     db_path = Path("sca.sqlite3")
 
     def __init__(self, language="english"):
-        if not language in stopwords.fileids():
-            raise ValueError(f"Invalid language code '{language}'")
-        self.language = language
-        self.stopwords = set(stopwords.words(language))
-        self.custom_stopwords = set()
-
+        self.set_language(language)
         self.collocates = set()
         logger.info(
             f"Initialized SCA with language '{language}' and {len(self.stopwords)} stopwords"
         )
+
+    def set_language(self, language):
+        if language is None:
+            self.language = None
+            self.stopwords = set()
+        elif not language in stopwords.fileids():
+            raise ValueError(f"Invalid language code '{language}'")
+        else:
+            self.language = language
+            self.stopwords = set(stopwords.words(language))
+        self.custom_stopwords = set()
 
     def load_stopwords_from_file(self, file_path: str | Path):
         """Load custom stopwords from a text file.
@@ -271,7 +281,10 @@ class SCA:
         Raises:
             ValueError: If the language configuration is invalid
         """
-        if not self.language or self.language not in stopwords.fileids():
+        if (
+            self.language is not None
+            and self.language not in stopwords.fileids()
+        ):
             raise ValueError("Invalid language configuration")
 
         logger.info(f"Saving SCA settings to {self.yaml_path}")
@@ -301,13 +314,8 @@ class SCA:
             settings = safe_load(f)
         logger.info(f"Successfully loaded settings from {self.yaml_path}")
 
-        self.language = settings["language"]
+        self.set_language(settings["language"])
 
-        if not self.language in stopwords.fileids():
-            raise ValueError(f"Invalid language code '{self.language}'")
-
-        # Initialize base stopwords from language
-        self.stopwords = set(stopwords.words(self.language))
         logger.info(
             f"Loaded language '{self.language}' with {len(self.stopwords)} stopwords"
         )
@@ -481,11 +489,16 @@ class SCA:
                 )
 
         self.columns = sorted(
-            set(map(str.lower, data.columns))
-            - {
-                self.id_col,
-                self.text_column,
-            }
+            set(
+                map(
+                    str.lower,
+                    set(data.columns)
+                    - {
+                        self.id_col,
+                        self.text_column,
+                    },
+                )
+            )
         )
         logger.info(f"Set data columns: {self.columns}")
 

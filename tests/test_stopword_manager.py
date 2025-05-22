@@ -126,6 +126,19 @@ def test_get_positions_with_custom_stopwords():
     assert positions_with_stopwords["word*"] == [0, 2]
 
 
+def test_get_cyrillic_positions_with_custom_stopwords():
+    corpus = SCA()
+    corpus.add_stopwords({"стоп"})
+
+    tokens = ["слово1", "стоп", "слово2"]
+    positions = corpus.get_positions(tokens, False, "слово*")
+
+    assert positions["слово*"] == [0, 1]
+
+    positions_with_stopwords = corpus.get_positions(tokens, True, "слово*")
+    assert positions_with_stopwords["слово*"] == [0, 2]
+
+
 def test_modify_stopwords():
     corpus = SCA()
     corpus.add_stopwords({"new1", "new2"})
