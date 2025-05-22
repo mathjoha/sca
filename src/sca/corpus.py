@@ -926,7 +926,14 @@ class SCA:
             f"Using {len(collocates)} collocate specifications for this group."
         )
 
-        db = sqlite_utils.Database(self.conn)
+        self.conn.execute(
+            f"""
+            create table if not exists named_collocate (
+            name, table_name, term1, term2, window,
+            UNIQUE(term1, term2, window))
+            """
+        )
+
         named_collocate_records = [
             {
                 "name": collocate_name,
@@ -937,11 +944,14 @@ class SCA:
             }
             for pattern1, pattern2, window in collocates
         ]
-        db["named_collocate"].insert_all(
-            records=named_collocate_records,
-            pk=("name", "term1", "term2"),
-            alter=False,
+        self.conn.executemany(
+            f"""
+            insert into named_collocate (name, table_name, term1, term2, window)
+            values (:name, :table_name, :term1, :term2, :window)
+            """,
+            named_collocate_records,
         )
+
         logger.info(
             f"Inserted {len(collocates)} specifications into 'named_collocate' for group '{collocate_name}'."
         )
