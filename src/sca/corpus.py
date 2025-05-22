@@ -124,20 +124,6 @@ class SCA:
         self.language = language
         self.stopwords = set(stopwords.words(language))
         self.custom_stopwords = set()
-        self.add_stopwords(
-            {
-                "hon",
-                "house",
-                "member",
-                "common",
-                "speaker",
-                "mr",
-                "friend",
-                "gentleman",
-                "one",
-                "would",
-            }
-        )
 
         self.collocates = set()
         logger.info(
@@ -322,20 +308,6 @@ class SCA:
 
         # Initialize base stopwords from language
         self.stopwords = set(stopwords.words(self.language))
-        self.add_stopwords(
-            {
-                "hon",
-                "house",
-                "member",
-                "common",
-                "speaker",
-                "mr",
-                "friend",
-                "gentleman",
-                "one",
-                "would",
-            }
-        )
         logger.info(
             f"Loaded language '{self.language}' with {len(self.stopwords)} stopwords"
         )
