@@ -32,6 +32,15 @@ jobs:
       - name: Build package
         run: hatch build
 
+      - name: Validate package version
+        run: |
+          python -c "
+          from setuptools_scm import get_version
+          version = get_version()
+          if '+' in version:
+              raise ValueError(f'Invalid version {version} for PyPI upload')
+          "
+
       - name: mint API token
         id: mint-token
         run: |
