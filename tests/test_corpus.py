@@ -390,7 +390,6 @@ def test_language_initialization():
         SCA(language="invalid_lang")
 
 
-@pytest.mark.xfail(strict=True, reason="Red Phase")
 def test_empty_stopwords():
     corpus = SCA()
     # Simulate clearing all stopwords, including base language and custom
@@ -402,8 +401,8 @@ def test_empty_stopwords():
 
     positions = corpus.get_positions(
         ["the", "word"],  # Tokens: "the" at 0, "word" at 1
+        False,  # This means stopwords SHOULD be skipped
         "word",
-        count_stopwords=False,  # This means stopwords SHOULD be skipped
     )
     # If "the" were a stopword and count_stopwords=False, it would be skipped,
     # and "word" would be at effective position 0.
@@ -414,8 +413,8 @@ def test_empty_stopwords():
     # Test with count_stopwords=True (shouldn't change behavior if list is empty)
     positions_count_true = corpus.get_positions(
         ["the", "word"],
+        True,  # Stopwords (if any) are counted
         "word",
-        count_stopwords=True,  # Stopwords (if any) are counted
     )
     assert positions_count_true["word"] == [1]
 
@@ -425,8 +424,8 @@ def test_empty_stopwords():
 
     positions_with_stops = corpus_original_stopwords.get_positions(
         ["the", "word"],
+        False,  # "the" should be skipped
         "word",
-        count_stopwords=False,  # "the" should be skipped
     )
     # "the" is skipped, "word" is at effective position 0
     assert positions_with_stops["word"] == [0]
@@ -435,7 +434,9 @@ def test_empty_stopwords():
     corpus_original_stopwords.stopwords.clear()
     corpus_original_stopwords.custom_stopwords.clear()
     positions_after_clear = corpus_original_stopwords.get_positions(
-        ["the", "word"], "word", count_stopwords=False
+        ["the", "word"],
+        False,  # "the" should be skipped
+        "word",
     )
     assert positions_after_clear["word"] == [
         1
