@@ -123,20 +123,22 @@ class SCA:
             raise ValueError(f"Invalid language code '{language}'")
         self.language = language
         self.stopwords = set(stopwords.words(language))
-        self.custom_stopwords = {
-            "hon",
-            "house",
-            "member",
-            "common",
-            "speaker",
-            "mr",
-            "friend",
-            "gentleman",
-            "one",
-            "would",
-        }
+        self.custom_stopwords = set()
+        self.add_stopwords(
+            {
+                "hon",
+                "house",
+                "member",
+                "common",
+                "speaker",
+                "mr",
+                "friend",
+                "gentleman",
+                "one",
+                "would",
+            }
+        )
 
-        self.stopwords |= self.custom_stopwords
         self.collocates = set()
         logger.info(
             f"Initialized SCA with language '{language}' and {len(self.stopwords)} stopwords"
@@ -156,11 +158,24 @@ class SCA:
             raise FileNotFoundError(f"Stopwords file not found: {file_path}")
 
         with open(file_path, "r", encoding="utf8") as f:
-            custom_stopwords = {word.lower() for word in f.read().split()}
-        self.stopwords.update(custom_stopwords)
-        logger.info(
-            f"Added {len(custom_stopwords)} custom stopwords from {file_path}"
+            custom_stopwords_from_file = {
+                word.lower() for word in f.read().split()
+            }
+
+        # Update overall stopwords and only add to custom_stopwords those not in language set
+        newly_added_custom = custom_stopwords_from_file - set(
+            stopwords.words(self.language)
         )
+        self.custom_stopwords.update(newly_added_custom)
+        self.stopwords.update(
+            custom_stopwords_from_file
+        )  # ensure all from file are added to main set
+
+        logger.info(
+            f"Loaded {len(custom_stopwords_from_file)} stopwords from {file_path}. "
+            f"{len(newly_added_custom)} were added to custom stopwords."
+        )
+        self._reset_stopwords_dependent_calculations()
 
     def read_file(
         self,
@@ -226,6 +241,16 @@ class SCA:
         logger.info(
             f"Loaded {len(self.collocates)} collocate pairs from collocate_window table."
         )
+        self.conn.execute(
+            """create table if not exists named_collocate (
+            name text,
+            table_name text,
+            term1 text,
+            term2 text,
+            window integer,
+            UNIQUE(name, term1, term2, window))"""
+        )
+        logger.info("Ensured 'named_collocate' table exists.")
         atexit.register(self.save)
 
     def settings_dict(self):
@@ -265,7 +290,7 @@ class SCA:
 
         logger.info(f"Saving SCA settings to {self.yaml_path}")
         settings = self.settings_dict()
-        settings["collocates"] = list(settings["collocates"])
+        settings["collocates"] = sorted(settings["collocates"])
         settings["id_col"] = self.id_col
         settings["text_column"] = self.text_column
         settings["columns"] = sorted(list(self.columns))
@@ -297,18 +322,20 @@ class SCA:
 
         # Initialize base stopwords from language
         self.stopwords = set(stopwords.words(self.language))
-        self.stopwords |= {
-            "hon",
-            "house",
-            "member",
-            "common",
-            "speaker",
-            "mr",
-            "friend",
-            "gentleman",
-            "one",
-            "would",
-        }
+        self.add_stopwords(
+            {
+                "hon",
+                "house",
+                "member",
+                "common",
+                "speaker",
+                "mr",
+                "friend",
+                "gentleman",
+                "one",
+                "would",
+            }
+        )
         logger.info(
             f"Loaded language '{self.language}' with {len(self.stopwords)} stopwords"
         )
@@ -347,6 +374,16 @@ class SCA:
             ).fetchall()
         )
         logger.info(f"Loaded {len(self.terms)} terms from the database.")
+        self.conn.execute(
+            """create table if not exists named_collocate (
+            name text,
+            table_name text,
+            term1 text,
+            term2 text,
+            window integer,
+            UNIQUE(name, term1, term2, window))"""
+        )
+        logger.info("Ensured 'named_collocate' table exists.")
 
     def set_data_cols(self):
         """Sets the data columns for the SCA object.
@@ -505,20 +542,18 @@ class SCA:
         logger.info(f"Finished seeding database from {source_path}")
 
     def get_positions(self, tokens, count_stopwords=False, *patterns):
-        """Finds all occurrences of patterns in a list of tokens.
+        """Retrieves the positions of specified patterns within a list of tokens.
 
         Args:
             tokens: A list of token strings.
             count_stopwords: If True, stopwords are included in position counts.
-                             If False (default), stopwords are ignored and do not
-                             affect position numbering.
-            *patterns: Variable length argument list of pattern strings to search for.
-                       Patterns can include wildcards (e.g., "*ing").
+                             Defaults to False.
+            *patterns: One or more patterns to search for. Patterns can include
+                       wildcards ('*') for partial matching.
 
         Returns:
-            A dictionary where keys are the input patterns and values are lists
-            of integer positions where each pattern was found. Positions are
-            0-indexed.
+            A dictionary where keys are patterns and values are lists of
+            integer positions where each pattern occurs.
         """
         pos_dict = defaultdict(list)
         stops = 0
@@ -924,17 +959,6 @@ class SCA:
             f"Using {len(collocates)} collocate specifications for this group."
         )
 
-        self.conn.execute(
-            """create table if not exists named_collocate (
-            name text,
-            table_name text,
-            term1 text,
-            term2 text,
-            window integer,
-            UNIQUE(name, term1, term2, window))"""
-        )
-        logger.info("Ensured 'named_collocate' table exists.")
-
         db = sqlite_utils.Database(self.conn)
         named_collocate_records = [
             {
@@ -1058,6 +1082,52 @@ class SCA:
         self.conn.commit()
         logger.info(f"Successfully inserted token data into '{table_name}'.")
 
+    def _reset_stopwords_dependent_calculations(self):
+        """Resets database tables and internal states affected by stopword changes."""
+        logger.info("Resetting stopwords-dependent calculations.")
+        if hasattr(self, "conn") and self.conn is not None:
+            cursor = self.conn.cursor()
+
+            # Clear collocate_window table
+            cursor.execute("DELETE FROM collocate_window")
+            logger.info("Cleared 'collocate_window' table.")
+
+            # Drop group tables and clear named_collocate entries
+            group_tables_to_drop = cursor.execute(
+                "SELECT table_name FROM named_collocate"
+            ).fetchall()
+            for (table_name,) in group_tables_to_drop:
+                if (
+                    table_name
+                    and isinstance(table_name, str)
+                    and sqlite3_friendly(table_name)
+                ):  # Ensure table_name is valid and safe
+                    cursor.execute(
+                        f"DROP TABLE IF EXISTS [{table_name}]"
+                    )  # Quote table name
+                    logger.info(f"Dropped table '{table_name}'.")
+                elif table_name and isinstance(table_name, str):
+                    logger.warning(
+                        f"Skipping drop for potentially unsafe table name: {table_name}"
+                    )
+
+            cursor.execute("DELETE FROM named_collocate")
+            logger.info("Cleared 'named_collocate' table.")
+
+            self.conn.commit()
+            # Vacuum to reclaim space after deletions and drops
+            # self.conn.execute("VACUUM")
+            # logger.info("Vacuumed database.")
+            logger.info("Committed changes for resetting calculations.")
+        else:
+            logger.info(
+                "No active database connection, skipping database resets."
+            )
+
+        # Reset internal collocate set if it's derived from db that's now cleared
+        self.collocates = set()
+        logger.info("Reset internal collocates set.")
+
     def add_stopwords(self, new_stopwords: set):
         """Add custom stopwords programmatically.
 
@@ -1072,9 +1142,12 @@ class SCA:
 
         self.custom_stopwords |= new_stopwords - self.stopwords
         self.stopwords |= new_stopwords
-        logger.info(f"Added {len(new_stopwords)} custom stopwords")
+        logger.info(
+            f"Added {len(new_stopwords - (self.stopwords - self.custom_stopwords))} custom stopwords"
+        )
+        self._reset_stopwords_dependent_calculations()
 
-    def remove_stopwords(self, stopwords: set):
+    def remove_stopwords(self, stopwords_to_remove: set):
         """Remove stopwords programmatically.
 
         Args:
@@ -1083,8 +1156,24 @@ class SCA:
         Raises:
             TypeError: If stopwords is not a set.
         """
-        if not isinstance(stopwords, set):
+        if not isinstance(stopwords_to_remove, set):
             raise TypeError("Stopwords must be provided as a set")
 
-        self.stopwords.difference_update(stopwords)
-        logger.info(f"Removed {len(stopwords)} stopwords")
+        removed_custom = self.custom_stopwords.intersection(
+            stopwords_to_remove
+        )
+        self.custom_stopwords.difference_update(stopwords_to_remove)
+
+        removed_lang_sw = (
+            set(stopwords.words(self.language))
+            - (self.stopwords - stopwords_to_remove)
+        ).intersection(stopwords_to_remove)
+
+        self.stopwords.difference_update(stopwords_to_remove)
+        logger.info(
+            f"Removed {len(stopwords_to_remove)} stopwords. {len(removed_custom)} were custom, {len(removed_lang_sw)} were language-specific."
+        )
+        self._reset_stopwords_dependent_calculations()
+
+    def __repr__(self):
+        return f"SCA(language={self.language}, stopwords={self.stopwords}, custom_stopwords={self.custom_stopwords}, collocates={self.collocates}, id_col={self.id_col}, text_column={self.text_column}, columns={self.columns})"
