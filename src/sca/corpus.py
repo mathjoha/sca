@@ -1065,6 +1065,3 @@ class SCA:
             f"Removed {len(stopwords_to_remove)} stopwords. {len(removed_custom)} were custom, {len(removed_lang_sw)} were language-specific."
         )
         self._reset_stopwords_dependent_calculations()
-
-    def __repr__(self):
-        return f"SCA(language={self.language}, stopwords={self.stopwords}, custom_stopwords={self.custom_stopwords}, collocates={self.collocates}, id_col={self.id_col}, text_column={self.text_column}, columns={self.columns})"
