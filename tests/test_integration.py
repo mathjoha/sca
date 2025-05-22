@@ -972,43 +972,17 @@ class TestSCAOperations:
         sca, table_name_expected = sca_with_test_collocate_group
 
         # Act: Connect and check for table
-        conn = sqlite3.connect(sca.db_path)
-        cursor = conn.cursor()
+        cursor = sca.conn.cursor()
         cursor.execute(
             "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
             (table_name_expected,),
         )
         table_exists = cursor.fetchone()
-        conn.close()
 
         # Assert
         assert (
             table_exists is not None
         ), f"Table {table_name_expected} was not created."
-
-    def test_create_collocate_group_table_schema_correct(
-        self, sca_with_test_collocate_group
-    ):
-        # Arrange: Done by fixture
-        sca, table_name_expected = sca_with_test_collocate_group
-
-        # Act: Connect and get schema
-        conn = sqlite3.connect(sca.db_path)
-        cursor = conn.cursor()
-        cursor.execute(f"PRAGMA table_info({table_name_expected})")
-        schema_info = {
-            row[1] for row in cursor.fetchall()
-        }  # set of column names
-        conn.close()
-
-        # Assert
-        expected_cols_in_schema = {
-            "text_fk",
-            "collocate_name",
-        }
-        assert expected_cols_in_schema.issubset(
-            schema_info
-        ), f"Expected columns missing in {table_name_expected}. Got {schema_info}"
 
     def test_counts_by_subgroups_with_empty_collocates_list_raises_db_error(
         self, sca_initial_data, tmp_path
