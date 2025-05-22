@@ -54,50 +54,39 @@ def test_count_entries(sca_filled: sca.SCA):
     assert count == 100
 
 
-@pytest.mark.skip(reason="Not converted to pseudo data")
 def test_columns(sca_filled: sca.SCA):
     cursor = sca_filled.conn.execute("select * from raw")
     columns = [_[0] for _ in cursor.description]
     assert columns == [
-        "speech_id",
-        "year",
-        "date",
-        "parliament",
-        "topic",
-        "function",
-        "speaker_id",
-        "party",
-        "party_in_power",
-        "cabinet",
-        "district",
-        "district_class",
-        "times_in_house",
-        "seniority",
-        "speech_text",
+        "id",
+        "Section",
+        "Title",
+        "Content",
+        "Date",
     ]
 
 
-@pytest.mark.skip(reason="Not converted to pseudo data")
+@pytest.mark.xfail(strict=True, reason="Not converted to pseudo data")
 def test_collocate_len(speeches_with_collocates: list[tuple[str, str, int]]):
     assert len(speeches_with_collocates) == 20
 
 
-@pytest.mark.skip(reason="Not converted to pseudo data")
+@pytest.mark.xfail(strict=True, reason="Not converted to pseudo data")
 def test_collocate_min(speeches_with_collocates: list[tuple[str, str, int]]):
     assert min(w for *_, w in speeches_with_collocates) == 1
 
 
-@pytest.mark.skip(reason="Not converted to pseudo data")
+@pytest.mark.xfail(strict=True, reason="Not converted to pseudo data")
 def test_collocate_max(speeches_with_collocates: list[tuple[str, str, int]]):
     assert max(w for *_, w in speeches_with_collocates) == 82
 
 
-@pytest.mark.skip(reason="Not converted to pseudo data")
+@pytest.mark.xfail(strict=True, reason="Not converted to pseudo data")
 def test_collocate_sum(speeches_with_collocates: list[tuple[str, str, int]]):
     assert sum(w for *_, w in speeches_with_collocates) == 384
 
 
-@pytest.mark.skip(reason="Not converted to pseudo data")
+@pytest.mark.xfail(strict=True, reason="Not converted to pseudo data")
 def test_collocate_lenw10(
     speeches_with_collocates: list[tuple[str, str, int]]
 ):
@@ -130,12 +119,11 @@ def test_set_name_text_column(db_path, tsv_file: Path):
         )
 
 
-@pytest.mark.skip(reason="Not converted to pseudo data")
+@pytest.mark.xfail(strict=True, reason="Not converted to pseudo data")
 def test_name_id_col(sca_filled: sca.SCA):
     assert sca_filled.id_col == "speech_id"
 
 
-@pytest.mark.skip(reason="Not converted to pseudo data")
 class TestSavedSettings:
     def test_collocates(self, settings: dict):
         assert settings["collocates"] == {
