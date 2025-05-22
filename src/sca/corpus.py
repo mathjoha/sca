@@ -725,7 +725,7 @@ class SCA:
             f"and window <= {window})"
         )
 
-    def add_collocates(self, collocates):
+    def add_collocates(self, collocates, allow_duplicates=False):
         """Adds new collocate pairs to the SCA object.
 
         This involves cleaning the input patterns, adding any new terms to the
@@ -760,6 +760,15 @@ class SCA:
         if not prepared_collocates:
             logger.info("No collocates to add.")
             raise ValueError(f"No clean collocates to add from {collocates=}")
+        elif (
+            len(prepared_collocates) != len(collocates)
+            and not allow_duplicates
+        ):
+            logger.info(
+                f"Could not add all collocates {collocates=}. "
+                f"Only {prepared_collocates=} could have been added."
+            )
+            raise ValueError(f"Could not add all collocates, aborting.")
 
         logger.info(
             f"Prepared {len(prepared_collocates)} new collocate pairs for processing."

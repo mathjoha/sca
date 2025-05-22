@@ -889,7 +889,10 @@ class TestSCAOperations:
         count_after_first_add = len(sca.collocates)
 
         # Act: Add the same collocate again
-        sca.add_collocates([collocate_pair])
+        with pytest.raises(
+            ValueError, match="No clean collocates to add from "
+        ):
+            sca.add_collocates([collocate_pair])
 
         # Assert
         assert (
