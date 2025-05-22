@@ -1,3 +1,4 @@
+import sqlite3
 from pathlib import Path
 
 import pandas as pd
@@ -27,6 +28,39 @@ def create_dummy_tsv(file_path: Path, num_headers: int, num_rows: int):
     df["id_tsv"] = [f"id_tsv_{i}" for i in range(num_rows)]
     df["text_tsv"] = [f"text_tsv_{i}" for i in range(num_rows)]
     df.to_csv(file_path, index=False, sep="\t")
+
+
+@pytest.fixture
+def minimal_corpus_for_collocation(tmp_path: Path) -> SCA:
+    """Creates a minimal SCA instance with a few texts for testing collocations."""
+    csv_path = tmp_path / "minimal_colloc.csv"
+    db_path = tmp_path / "minimal_colloc.sqlite3"
+
+    data = {
+        "doc_id": ["text1", "text2", "text3", "text4", "text5"],
+        "content": [
+            "alpha bravo charlie delta",  # alpha, bravo together
+            "alpha foxtrot charlie golf",  # alpha, charlie, not close
+            "hotel india bravo xray",  # bravo, no alpha
+            "alpha bravo alpha bravo echo",  # multiple alpha, bravo
+            "alpha trash trash trash trash trash bravo",  # multiple alpha, bravo
+        ],
+    }
+    df = pd.DataFrame(data)
+    df.to_csv(csv_path, index=False)
+
+    corpus = SCA(language="english")
+    # Clear default stopwords for predictable testing of window sizes
+    corpus.stopwords = set()
+    corpus.custom_stopwords = set()
+
+    corpus.read_file(
+        tsv_path=csv_path,
+        id_col="doc_id",
+        text_column="content",
+        db_path=db_path,
+    )
+    return corpus
 
 
 def test_header_sanitation_check(tmp_path: Path):
@@ -338,3 +372,212 @@ def test_seed_db_with_tsv_headers_only_raises_db_error(tmp_path: Path):
             text_column="text",
             db_path=db_path,
         )
+
+
+def test_language_initialization():
+    """Test initializing SCA with different languages."""
+    english_corpus = SCA(language="english")
+    french_corpus = SCA(language="french")
+    german_corpus = SCA(language="german")
+
+    assert "the" in english_corpus.stopwords
+    assert "le" in french_corpus.stopwords
+    assert "der" in german_corpus.stopwords
+
+    with pytest.raises(
+        ValueError, match="Invalid language code 'invalid_lang'"
+    ):
+        SCA(language="invalid_lang")
+
+
+def test_empty_stopwords():
+    corpus = SCA()
+    corpus.stopwords = set()
+    corpus.custom_stopwords = set()
+
+    positions = corpus.get_positions(
+        ["the", "word"],
+        False,
+        "word",
+    )
+
+    assert positions["word"] == [1]
+
+    positions_count_true = corpus.get_positions(
+        ["the", "word"],
+        True,
+        "word",
+    )
+    assert positions_count_true["word"] == [1]
+
+    corpus_original_stopwords = SCA()
+    assert "the" in corpus_original_stopwords.stopwords
+
+    positions_with_stops = corpus_original_stopwords.get_positions(
+        ["the", "word"],
+        False,
+        "word",
+    )
+
+    assert positions_with_stops["word"] == [0]
+
+    corpus_original_stopwords.stopwords.clear()
+    corpus_original_stopwords.custom_stopwords.clear()
+    positions_after_clear = corpus_original_stopwords.get_positions(
+        ["the", "word"],
+        False,
+        "word",
+    )
+    assert positions_after_clear["word"] == [1]
+
+
+def test_add_remove_stopwords_impact_on_get_positions():
+    corpus = SCA(language="english")
+    tokens = ["a", "custom", "word", "the", "another"]
+
+    positions = corpus.get_positions(
+        tokens,
+        False,
+        "custom",
+        "word",
+        "another",
+    )
+    assert positions["custom"] == [0]
+    assert positions["word"] == [1]
+    assert positions["another"] == [2]
+
+    corpus.add_stopwords({"custom"})
+    positions_after_add = corpus.get_positions(
+        tokens,
+        False,
+        "word",
+        "another",
+    )
+    assert "custom" not in positions_after_add
+    assert positions_after_add["word"] == [0]
+    assert positions_after_add["another"] == [1]
+
+    corpus.remove_stopwords({"the"})
+    positions_after_remove = corpus.get_positions(
+        tokens,
+        False,
+        "custom",
+        "word",
+        "the",
+        "another",
+    )
+    assert positions_after_remove["word"] == [0]
+    assert positions_after_remove["the"] == [1]
+    assert positions_after_remove["another"] == [2]
+
+
+def test_stopwords_impact_on_mark_windows(minimal_corpus_for_collocation: SCA):
+    corpus = minimal_corpus_for_collocation
+
+    corpus.mark_windows("alpha", "bravo")
+    windows_before_stopword = (
+        pd.read_sql_query(
+            "SELECT doc_id, window FROM collocate_window WHERE pattern1='alpha' AND pattern2='bravo'",
+            corpus.conn,
+        )
+        .set_index("doc_id")["window"]
+        .to_dict()
+    )
+    assert windows_before_stopword.get("text1") == 1
+    assert windows_before_stopword.get("text4") == 1
+    assert "text2" not in windows_before_stopword
+    assert "text3" not in windows_before_stopword
+
+    corpus.add_stopwords({"bravo"})
+
+    corpus.mark_windows(
+        "alpha",
+        "bravo",
+        False,
+    )
+    windows_after_stopword_false = (
+        pd.read_sql_query(
+            "SELECT doc_id, window FROM collocate_window WHERE pattern1='alpha' AND pattern2='bravo'",
+            corpus.conn,
+        )
+        .set_index("doc_id")["window"]
+        .to_dict()
+    )
+    assert windows_after_stopword_false == {None: None}
+
+    corpus.mark_windows(
+        "alpha",
+        "bravo",
+        True,
+    )
+    windows_after_stopword_true = (
+        pd.read_sql_query(
+            "SELECT doc_id, window FROM collocate_window WHERE pattern1='alpha' AND pattern2='bravo'",
+            corpus.conn,
+        )
+        .set_index("doc_id")["window"]
+        .to_dict()
+    )
+    assert windows_after_stopword_true.get("text1") == 1
+    assert windows_after_stopword_true.get("text4") == 1
+    assert "text2" not in windows_after_stopword_true
+    assert "text3" not in windows_after_stopword_true
+
+    corpus.remove_stopwords({"bravo"})
+    corpus.mark_windows("alpha", "bravo")
+    windows_after_remove = (
+        pd.read_sql_query(
+            "SELECT doc_id, window FROM collocate_window WHERE pattern1='alpha' AND pattern2='bravo'",
+            corpus.conn,
+        )
+        .set_index("doc_id")["window"]
+        .to_dict()
+    )
+    assert windows_after_remove.get("text1") == 1
+    assert windows_after_remove.get("text4") == 1
+
+
+def test_stopwords_impact_on_create_collocate_group(
+    minimal_corpus_for_collocation: SCA,
+):
+    corpus = minimal_corpus_for_collocation
+
+    collocates_spec = [("alpha", "bravo", 5)]
+    group_name_v1 = "test_group_v1"
+
+    corpus.create_collocate_group(group_name_v1, collocates_spec)
+
+    group_table_name_v1 = f"group_{group_name_v1}"
+    df_v1 = pd.read_sql_query(
+        f"SELECT * FROM {group_table_name_v1}", corpus.conn
+    )
+    assert len(df_v1) == 0
+
+    group_name_v2 = "test_group_v2"
+    corpus.add_collocates([c[:2] for c in collocates_spec])
+    corpus.create_collocate_group(group_name_v2, collocates_spec)
+
+    group_table_name_v2 = f"group_{group_name_v2}"
+    df_v2 = pd.read_sql_query(
+        f"SELECT * FROM {group_table_name_v2}", corpus.conn
+    )
+    assert len(df_v2) == 2
+    assert list(df_v2.text_fk.unique()) == ["text1", "text4"]
+
+    # Add "alpha" as a stopword. This should trigger a reset.
+    corpus.add_stopwords({"trash"})
+
+    with pytest.raises(pd.errors.DatabaseError, match="no such table"):
+        df_v2 = pd.read_sql_query(
+            f"SELECT * FROM {group_table_name_v2}", corpus.conn
+        )
+
+    group_name_v2 = "test_group_v2"
+    corpus.add_collocates([c[:2] for c in collocates_spec])
+    corpus.create_collocate_group(group_name_v2, collocates_spec)
+
+    df_v2 = pd.read_sql_query(
+        f"SELECT * FROM {group_table_name_v2}", corpus.conn
+    )
+    assert len(df_v2) == 3
+    assert list(df_v2.text_fk.unique()) == ["text1", "text4", "text5"]

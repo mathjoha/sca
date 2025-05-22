@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from sca.corpus import SCA
+from sca import SCA
 
 
 def create_minimal_tsv(
@@ -117,12 +117,13 @@ def test_named_collocate_prevents_duplicates(tmp_path: Path):
     )
 
     group_name = "test_group"
-    collocates = [("Alice*", "Bob*", 5), ("Charlie*", "David*", 5)]
+    collocates = [("alice*", "bob*", 5), ("charlie*", "david*", 5)]
+
+    sca_instance.add_collocates([c[:2] for c in collocates])
 
     sca_instance.create_collocate_group(group_name, collocates)
 
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
+    cursor = sca_instance.conn.cursor()
 
     cursor.execute("SELECT * FROM named_collocate")
     rows = cursor.fetchall()
@@ -133,14 +134,12 @@ def test_named_collocate_prevents_duplicates(tmp_path: Path):
     with pytest.raises(sqlite3.IntegrityError):
         cursor.execute(
             "INSERT INTO named_collocate (name, table_name, term1, term2, window) VALUES (?, ?, ?, ?, ?)",
-            (group_name, f"group_{group_name}", "Alice*", "Bob*", 5),
+            (group_name, f"group_{group_name}", "alice*", "bob*", 5),
         )
-        conn.commit()
 
-    sca_instance.create_collocate_group(group_name, collocates)
+    with pytest.raises(sqlite3.IntegrityError):
+        sca_instance.create_collocate_group(group_name, collocates)
+
     cursor.execute("SELECT * FROM named_collocate")
     rows = cursor.fetchall()
     assert len(rows) == 2, "Expected two entries in named_collocate table"
-    conn.close()
-
-    conn.close()

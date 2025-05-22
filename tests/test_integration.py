@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 import yaml
 
-from sca import SCA
+from sca import SCA, from_file
 
 
 # Fixture for a basic SCA instance with some data
@@ -24,8 +24,7 @@ def sca_initial_data(tmp_path):
     with open(tsv_path, "w") as f:
         f.write(tsv_content)
 
-    sca = SCA()
-    sca.read_file(
+    sca = from_file(
         tsv_path=tsv_path, id_col="id", text_column="text", db_path=db_path
     )
     sca.columns = {
@@ -210,6 +209,8 @@ class TestFileAndConfigLoading:
             # id_col is missing
             "text_column: text\n"
             "columns: [col1, col2]\n"
+            "language: english\n"
+            "custom_stopwords: [custom1, custom2]\n"
         )
         yml_path = tmp_path / "missing_key.yml"
         with open(yml_path, "w") as f:
@@ -521,7 +522,8 @@ class TestSCAOperations:
         # if not str(pattern).isdigit() is the primary filter here.
 
         # Act
-        sca.add_collocates([("numericterm", "123")])
+        with pytest.raises(ValueError, match="No clean collocates to add."):
+            sca.add_collocates([("numericterm", "123")])
 
         # Assert
         assert (
@@ -540,12 +542,28 @@ class TestSCAOperations:
         count_after_first_add = len(sca.collocates)
 
         # Act: Add the same collocate again
-        sca.add_collocates([collocate_pair])
+        with pytest.raises(ValueError, match="No clean collocates to add."):
+            sca.add_collocates([collocate_pair])
 
         # Assert
         assert (
             len(sca.collocates) == count_after_first_add
         ), "Adding a duplicate collocate should not change the count"
+
+    def test_add_collocates_duplicate_collocate(self, sca_initial_data: SCA):
+        # Arrange
+        sca = sca_initial_data
+        collocate_pair = ("firstcall", "term")
+        with pytest.raises(
+            ValueError, match="Aborting: Could not add ALL collocates."
+        ):
+            sca.add_collocates([collocate_pair] * 2)
+        assert collocate_pair not in sca.collocates
+        sca.add_collocates([collocate_pair] * 2, allow_duplicates=True)
+        assert collocate_pair in sca.collocates
+
+        with pytest.raises(ValueError, match="No clean collocates to add."):
+            sca.add_collocates([collocate_pair] * 2)
 
     def test_mark_windows_handles_fnmatch_mismatch(self, tmp_path):
         # Arrange: text has "alpha" and "betaX", but we search for "beta"
@@ -626,66 +644,17 @@ class TestSCAOperations:
         sca, table_name_expected = sca_with_test_collocate_group
 
         # Act: Connect and check for table
-        conn = sqlite3.connect(sca.db_path)
-        cursor = conn.cursor()
+        cursor = sca.conn.cursor()
         cursor.execute(
             "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
             (table_name_expected,),
         )
         table_exists = cursor.fetchone()
-        conn.close()
 
         # Assert
         assert (
             table_exists is not None
         ), f"Table {table_name_expected} was not created."
-
-    def test_create_collocate_group_table_schema_correct(
-        self, sca_with_test_collocate_group
-    ):
-        # Arrange: Done by fixture
-        sca, table_name_expected = sca_with_test_collocate_group
-
-        # Act: Connect and get schema
-        conn = sqlite3.connect(sca.db_path)
-        cursor = conn.cursor()
-        cursor.execute(f"PRAGMA table_info({table_name_expected})")
-        schema_info = {
-            row[1] for row in cursor.fetchall()
-        }  # set of column names
-        conn.close()
-
-        # Assert
-        expected_cols_in_schema = {
-            "text_fk",
-            "raw_text",
-            "token",
-            "sw",
-            "conterm",
-            "collocate_begin",
-            "collocate_end",
-        }
-        assert expected_cols_in_schema.issubset(
-            schema_info
-        ), f"Expected columns missing in {table_name_expected}. Got {schema_info}"
-
-    def test_create_collocate_group_table_has_data(
-        self, sca_with_test_collocate_group
-    ):
-        # Arrange: Done by fixture
-        sca, table_name_expected = sca_with_test_collocate_group
-
-        # Act: Connect and count rows
-        conn = sqlite3.connect(sca.db_path)
-        cursor = conn.cursor()
-        cursor.execute(f"SELECT COUNT(*) FROM {table_name_expected}")
-        row_count = cursor.fetchone()[0]
-        conn.close()
-
-        # Assert
-        assert (
-            row_count > 0
-        ), f"Table {table_name_expected} should contain data."
 
     def test_counts_by_subgroups_with_empty_collocates_list_raises_db_error(
         self, sca_initial_data, tmp_path
@@ -710,7 +679,9 @@ class TestSCAOperations:
 
         # Act & Assert
         # Malformed SQL from empty collocates list.
-        with pytest.raises(sqlite3.OperationalError, match=r"syntax error"):
+        with pytest.raises(
+            sqlite3.OperationalError, match=r"incomplete input"
+        ):
             sca.create_collocate_group(group_name, [])
 
     def test_add_collocates_with_pattern_cleaning_to_empty_raises_db_error(

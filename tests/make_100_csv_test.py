@@ -21,6 +21,20 @@ def sca_filled(db_path: Path, csv_file: Path) -> sca.SCA:
         id_col="speech_id",
         text_column="speech_text",
     )
+    corpus.add_stopwords(
+        {
+            "hon",
+            "house",
+            "member",
+            "common",
+            "speaker",
+            "mr",
+            "friend",
+            "gentleman",
+            "one",
+            "would",
+        }
+    )
     corpus.add_collocates((("govern*", "minister*"),))
     corpus.save()
     return corpus
@@ -146,10 +160,10 @@ class TestSavedSettings:
     def test_yaml_read_collocates(
         self, yml_loaded: sca.SCA, sca_filled: sca.SCA
     ):
-        assert (
-            yml_loaded.settings_dict()["collocates"]
-            == sca_filled.settings_dict()["collocates"]
-        )
+
+        filled_collocates = sca_filled.settings_dict()["collocates"]
+        loaded_collocates = yml_loaded.settings_dict()["collocates"]
+        assert loaded_collocates == filled_collocates
 
     def test_yaml_read_dbpath(self, yml_loaded: sca.SCA, sca_filled: sca.SCA):
         assert (
