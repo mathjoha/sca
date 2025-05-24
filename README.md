@@ -1,4 +1,5 @@
 ![test-coverage](/media/coverage.svg)
+[![DOI](https://zenodo.org/badge/898884500.svg)](https://doi.org/10.5281/zenodo.15492629)
 [![Publish Python Package to PyPI](https://github.com/mathjoha/sca/actions/workflows/hatch-publish-to-pypi.yml/badge.svg)](https://github.com/mathjoha/sca/actions/workflows/hatch-publish-to-pypi.yml)
 [![CI-tox](https://github.com/mathjoha/sca/actions/workflows/tox.yml/badge.svg)](https://github.com/mathjoha/sca/actions/workflows/tox.yml)
 <a href="https://creativecommons.org/licenses/by-nc/4.0/"><img decoding="async" loading="eager" src="https://mirrors.creativecommons.org/presskit/buttons/88x31/png/by-nc.png" width="71" height="25" align="right"></a>
